@@ -5164,26 +5164,31 @@ local Library do
 
             local LogoAsset = ""
             if Window.Logo == "132447680232071" or string.find(Window.Logo, ".png") or string.find(Window.Logo, ".jpg") then
-                Window.Logo = "image-removebg-preview.png"
-                local success = false
-                pcall(function()
-                    local url = "https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo
-                    local req = (syn and syn.request) or (http and http.request) or request
-                    if req then
-                        local res = req({
-                            Url = url,
-                            Method = "GET"
-                        })
-                        if res and res.StatusCode == 200 then
-                            writefile(Window.Logo, res.Body)
-                            success = true
+                local LogoPath = Library.Folders.Assets .. "/" .. Window.Logo
+
+                if isfile(LogoPath) then
+                    LogoAsset = getcustomasset(LogoPath)
+                else
+                    local success = false
+                    pcall(function()
+                        local url = "https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo
+                        local req = (syn and syn.request) or (http and http.request) or request
+                        if req then
+                            local res = req({
+                                Url = url,
+                                Method = "GET"
+                            })
+                            if res and res.StatusCode == 200 then
+                                writefile(LogoPath, res.Body)
+                                success = true
+                            end
                         end
-                    end
-                    if not success then
-                        writefile(Window.Logo, game:HttpGet(url))
-                    end
-                    LogoAsset = getcustomasset(Window.Logo)
-                end)
+                        if not success then
+                            writefile(LogoPath, game:HttpGet(url))
+                        end
+                        LogoAsset = getcustomasset(LogoPath)
+                    end)
+                end
             else
                 LogoAsset = "rbxassetid://" .. Window.Logo
             end

@@ -1,6 +1,6 @@
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/Lib"))()
-local Window = Library:Window({Logo = "image-removebg-preview.png", FadeTime = 0.3})
+local Window = Library:Window({Logo = "uilogo.png", FadeTime = 0.3})
 local Watermark = Library:Watermark("EpsteinWare | discord.gg/fqRKstBTBF")
 local KeybindList = Library:KeybindList()
 
