@@ -5396,10 +5396,8 @@ local Library do
                 Visible = false,
                 ScaleType = Enum.ScaleType.Slice,
                 SliceCenter = Rect.new(10, 10, 118, 118),
-                ZIndex = 1
+                ZIndex = 0
             })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
-
-            Items["Window"].Instance.ZIndex = 2
 
             local function updateGlow()
                 Items["OuterGlow"].Instance.Position = UDim2New(
