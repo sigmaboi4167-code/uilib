@@ -1078,6 +1078,7 @@ local Library do
                     BorderColor3 = FromRGB(12, 12, 12),
                     Size = Data.Size,
                     BorderSizePixel = 2,
+                    ClipsDescendants = true,
                     BackgroundColor3 = FromRGB(14, 17, 15)
                 })  Items["Window"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
 
@@ -5147,8 +5148,8 @@ local Library do
                 Window.Logo = "image-removebg-preview.png"
                 pcall(function()
                     local Result = game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo)
-                    writefile("uilib_logo_tmp.png", Result)
-                    LogoAsset = getcustomasset("uilib_logo_tmp.png")
+                    writefile("image-removebg-preview.png", Result)
+                    LogoAsset = getcustomasset("image-removebg-preview.png")
                 end)
             else
                 LogoAsset = "rbxassetid://" .. Window.Logo
@@ -5318,30 +5319,30 @@ local Library do
 
             UserInputService.MouseIconEnabled = false
 
-            Items["GlowFrame"] = Instances:Create("Frame", {
+            Items["WindowLiner"] = Instances:Create("Frame", {
                 Parent = Items["Window"].Instance,
                 Name = "\0",
-                BackgroundTransparency = 1,
-                Size = UDim2New(1, 0, 1, 0),
-                ZIndex = -1
-            })
-            Items["WindowGlow"] = Instances:Create("UIStroke", {
-                Parent = Items["GlowFrame"].Instance,
-                Thickness = 4,
-                Color = FromRGB(202, 243, 255),
-                Transparency = 0.4,
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-                LineJoinMode = Enum.LineJoinMode.Round
-            })  Items["WindowGlow"]:AddToTheme({Color = "Accent"})
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 0, 0, 1),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(202, 243, 255)
+            })  Items["WindowLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
-            Library:Thread(function()
-                while true do
-                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.3}):Play()
-                    task.wait(1.5)
-                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.8}):Play()
-                    task.wait(1.5)
-                end
-            end)
+            Items["WindowGlow"] = Instances:Create("Frame", {
+                Parent = Items["Window"].Instance,
+                Name = "\0",
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 0, 0, 15),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(202, 243, 255)
+            })  Items["WindowGlow"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+            Instances:Create("UIGradient", {
+                Parent = Items["WindowGlow"].Instance,
+                Name = "\0",
+                Rotation = 90,
+                Transparency = NumSequence{NumSequenceKeypoint(0, 0), NumSequenceKeypoint(0.193, 0.8687499761581421), NumSequenceKeypoint(0.504, 0.96875), NumSequenceKeypoint(1, 1)}
+            })
 
             Items["Blur"] = Instances:Create("BlurEffect", {
                 Parent = game:GetService("Lighting"),
@@ -5350,15 +5351,16 @@ local Library do
 
             Library:Thread(function()
                 while true do
-                    task.wait(math.random() * 0.5 + 0.1)
+                    task.wait(math.random() * 0.3 + 0.05)
                     if Window.IsOpen then
-                        local size = math.random(2, 5)
+                        local size = math.random(2, 4)
+                        local startX = math.random() * 0.8 + 0.1
                         local flake = Instances:Create("Frame", {
                             Parent = Items["Window"].Instance,
                             Size = UDim2New(0, size, 0, size),
-                            Position = UDim2New(math.random(), 0, 0, -10),
+                            Position = UDim2New(startX, 0, 0, -5),
                             BackgroundColor3 = FromRGB(255, 255, 255),
-                            BackgroundTransparency = math.random() * 0.5,
+                            BackgroundTransparency = 0.3 + math.random() * 0.4,
                             BorderSizePixel = 0,
                             ZIndex = 10
                         })
@@ -5366,11 +5368,11 @@ local Library do
                             Parent = flake.Instance,
                             CornerRadius = UDimNew(1, 0)
                         })
-                        local endY = 1 + (math.random() * 0.2)
-                        local duration = math.random(3, 7)
-                        local t = TweenService:Create(flake.Instance, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Position = UDim2New(math.random(), 0, endY, 0)})
+                        local drift = startX + (math.random() - 0.5) * 0.15
+                        local duration = math.random() * 4 + 3
+                        local t = TweenService:Create(flake.Instance, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Position = UDim2New(drift, 0, 0.95, 0)})
                         t:Play()
-                        task.delay(duration, function()
+                        t.Completed:Connect(function()
                             flake.Instance:Destroy()
                         end)
                     end
@@ -6425,15 +6427,15 @@ local Library do
             Items["Viewport"] = Instances:Create("ViewportFrame", {
                 Parent = ESPDummy.Section.Items["Content"].Instance,
                 Name = "\0",
-                BackgroundTransparency = 1,
+                BackgroundTransparency = 0,
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 Size = UDim2New(1, 0, 0, 200),
-                BackgroundColor3 = FromRGB(20, 24, 21),
-                LightColor = Color3.new(1, 1, 1),
-                LightDirection = Vector3.new(0, -1, 0),
-                Ambient = Color3.new(1, 1, 1)
-            })  Items["Viewport"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Border"})
+                BackgroundColor3 = FromRGB(15, 15, 20),
+                LightColor = FromRGB(255, 255, 255),
+                LightDirection = Vector3.new(-1, -2, -1),
+                Ambient = FromRGB(120, 120, 150)
+            })  Items["Viewport"]:AddToTheme({BorderColor3 = "Border"})
 
             Instances:Create("UIStroke", {
                 Parent = Items["Viewport"].Instance,
@@ -6442,46 +6444,161 @@ local Library do
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             }):AddToTheme({Color = "Outline"})
 
-            local CameraObj = InstanceNew("Camera")
-            CameraObj.Parent = Items["Viewport"].Instance
-            Items["Viewport"].Instance.CurrentCamera = CameraObj
+            local vpCamera = InstanceNew("Camera")
+            vpCamera.FieldOfView = 50
+            vpCamera.Parent = Items["Viewport"].Instance
+            Items["Viewport"].Instance.CurrentCamera = vpCamera
 
-            local Dummy = InstanceNew("Model")
-            Dummy.Name = "Dummy"
-            Dummy.Parent = Items["Viewport"].Instance
-            
-            local function CreatePart(name, size, pos)
-                local part = InstanceNew("Part")
-                part.Name = name
-                part.Size = size
-                part.Position = pos
-                part.Anchored = true
-                part.CanCollide = false
-                part.Color = Color3.fromRGB(163, 162, 165)
-                part.Material = Enum.Material.SmoothPlastic
-                part.Parent = Dummy
-                return part
+            local worldModel = InstanceNew("WorldModel")
+            worldModel.Parent = Items["Viewport"].Instance
+
+            local spinAngle = 0
+            local spinSpeed = 55
+
+            local function deepCopyInstance(original, parent)
+                local ok, copy = pcall(function()
+                    return original:Clone()
+                end)
+                if not ok or not copy then
+                    ok, copy = pcall(InstanceNew, original.ClassName)
+                    if not ok then return nil end
+                    for _, propName in ipairs({"Size", "CFrame", "Color", "BrickColor", "Material", "Transparency", "Reflectance", "CastShadow", "CanCollide", "MeshId", "TextureId", "Scale", "Offset", "MeshType", "Texture", "StudsPerTileU", "StudsPerTileV", "FaceId", "Color3", "Brightness"}) do
+                        pcall(function() copy[propName] = original[propName] end)
+                    end
+                end
+                if copy then
+                    if copy:IsA("Script") or copy:IsA("LocalScript") or copy:IsA("ModuleScript") or copy:IsA("Animator") then
+                        copy:Destroy()
+                        return nil
+                    end
+                    pcall(function() copy.Parent = parent end)
+                end
+                return copy
             end
-            
-            local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 3.5, 0))
-            local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 2, 0))
-            CreatePart("Left Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 2, 0))
-            CreatePart("Right Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 2, 0))
-            CreatePart("Left Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 0, 0))
-            CreatePart("Right Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 0, 0))
 
-            Dummy.PrimaryPart = Torso
-            CameraObj.CFrame = CFrame.new(Vector3.new(0, 2, -6), Torso.Position)
-            
+            local function copyDescendants(source, destParent)
+                for _, child in ipairs(source:GetChildren()) do
+                    if not (child:IsA("Script") or child:IsA("LocalScript") or child:IsA("ModuleScript") or child:IsA("Animator") or child:IsA("Animation")) then
+                        local copiedChild = deepCopyInstance(child, destParent)
+                        if copiedChild then
+                            copyDescendants(child, copiedChild)
+                        end
+                    end
+                end
+            end
+
+            local function loadCharacter()
+                for _, v in ipairs(worldModel:GetChildren()) do
+                    pcall(function() v:Destroy() end)
+                end
+
+                local char = LocalPlayer.Character
+                if not char then
+                    char = LocalPlayer.CharacterAdded:Wait()
+                end
+
+                local hrp = char:WaitForChild("HumanoidRootPart", 10)
+                if not hrp then return end
+
+                task.wait(0.5)
+
+                local dummyModel = InstanceNew("Model")
+                dummyModel.Name = LocalPlayer.Name .. "_Preview"
+                dummyModel.Parent = worldModel
+
+                for _, child in ipairs(char:GetChildren()) do
+                    if not (child:IsA("Script") or child:IsA("LocalScript") or child:IsA("ModuleScript") or child:IsA("Animator") or child:IsA("Animation")) then
+                        local ok, copy = pcall(function() return child:Clone() end)
+                        if not ok or not copy then
+                            copy = deepCopyInstance(child, dummyModel)
+                            if copy then
+                                copyDescendants(child, copy)
+                            end
+                        else
+                            for _, d in ipairs(copy:GetDescendants()) do
+                                if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") or d:IsA("Animator") then
+                                    pcall(function() d:Destroy() end)
+                                end
+                            end
+                            pcall(function() copy.Parent = dummyModel end)
+                        end
+                    end
+                end
+
+                local dummyHRP = dummyModel:FindFirstChild("HumanoidRootPart")
+                for _, part in ipairs(dummyModel:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.Anchored = true
+                        part.CanCollide = false
+                        part.Velocity = Vector3.zero
+                        part.RotVelocity = Vector3.zero
+                    end
+                end
+
+                if dummyHRP then
+                    local offset = dummyHRP.CFrame:Inverse()
+                    for _, part in ipairs(dummyModel:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            pcall(function()
+                                part.CFrame = offset * part.CFrame * CFrame.new(0, 0, 0)
+                            end)
+                        end
+                    end
+                    dummyHRP.CFrame = CFrame.new(0, 0, 0)
+                end
+
+                local hum = dummyModel:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    pcall(function()
+                        hum:ChangeState(Enum.HumanoidStateType.None)
+                        hum.PlatformStand = true
+                    end)
+                end
+
+                return dummyModel
+            end
+
+            Library:Thread(function()
+                task.wait(1)
+                pcall(loadCharacter)
+            end)
+
+            Library:Connect(LocalPlayer.CharacterAdded, function()
+                task.wait(2)
+                pcall(loadCharacter)
+            end)
+
+            Library:Connect(RunService.RenderStepped, function(dt)
+                spinAngle = spinAngle + spinSpeed * dt
+                local cloneModel = worldModel:FindFirstChildOfClass("Model")
+                local cloneHRP = cloneModel and cloneModel:FindFirstChild("HumanoidRootPart")
+                local centerY = cloneHRP and cloneHRP.Position.Y or 0
+                local radius = 6
+                local camX = MathSin(math.rad(spinAngle)) * radius
+                local camZ = math.cos(math.rad(spinAngle)) * radius
+                local camY = centerY + 2.4
+                vpCamera.CFrame = CFrame.new(Vector3.new(camX, camY, camZ), Vector3.new(0, camY, 0))
+            end)
+
             local ESPBox = InstanceNew("BoxHandleAdornment")
             ESPBox.Size = Vector3.new(4, 5.5, 1.5)
-            ESPBox.Adornee = Torso
             ESPBox.ZIndex = 1
             ESPBox.AlwaysOnTop = true
             ESPBox.Transparency = 0.5
-            ESPBox.Color3 = Color3.fromRGB(255, 0, 0)
-            ESPBox.Parent = Dummy
-            
+            ESPBox.Color3 = FromRGB(255, 0, 0)
+
+            Library:Thread(function()
+                task.wait(3)
+                local cloneModel = worldModel:FindFirstChildOfClass("Model")
+                if cloneModel then
+                    local torso = cloneModel:FindFirstChild("HumanoidRootPart") or cloneModel:FindFirstChild("Torso") or cloneModel:FindFirstChild("UpperTorso")
+                    if torso then
+                        ESPBox.Adornee = torso
+                        ESPBox.Parent = cloneModel
+                    end
+                end
+            end)
+
             Items["ESPBox"] = ESPBox
         end
 
