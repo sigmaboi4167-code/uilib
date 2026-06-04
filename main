@@ -16,6 +16,30 @@ local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
+-- Helper functions for games without Humanoid (e.g. Trident Survival)
+local function getHumanoid(char)
+    return char and (char:FindFirstChildOfClass("Humanoid") or char:FindFirstChild("Humanoid"))
+end
+
+local function isAlive(char)
+    if not char then return false end
+    local hum = getHumanoid(char)
+    if hum then return hum.Health > 0 end
+    return char:FindFirstChild("HumanoidRootPart") ~= nil or char:FindFirstChild("Head") ~= nil
+end
+
+local function getHealth(char)
+    local hum = getHumanoid(char)
+    if hum then return hum.Health, hum.MaxHealth end
+    return 100, 100
+end
+
+local function isR15Like(char)
+    local hum = getHumanoid(char)
+    if hum then return hum.RigType == Enum.HumanoidRigType.R15 end
+    return char:FindFirstChild("UpperTorso") ~= nil or char:FindFirstChild("LowerTorso") ~= nil
+end
+
 -- Aimbot variables
 local aimbotEnabled = false
 local aimbotSmoothing = 0.3
@@ -32,7 +56,7 @@ local function GetClosestPlayerToCursor()
     local mousePos = Vector2.new(Mouse.X, Mouse.Y)
     
     for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") and isAlive(v.Character) then
             if (not aimbotTeamCheck) or v.Team ~= LocalPlayer.Team then
                 local headPos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
                 if onScreen then
@@ -211,7 +235,7 @@ local function CreateBoxESP(plr)
     local function Update()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            if plr.Character and (plr.Character.PrimaryPart or plr.Character:FindFirstChild("HumanoidRootPart")) and isAlive(plr.Character) then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     Box.Visible = false
                     return
@@ -313,7 +337,7 @@ local function CreateHealthBarESP(plr)
     local function Updater()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 and plr.Character:FindFirstChild("Head") then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and isAlive(plr.Character) and plr.Character:FindFirstChild("Head") then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     healthbar.Visible = false
                     greenhealth.Visible = false
@@ -325,14 +349,16 @@ local function CreateHealthBarESP(plr)
                     local DistanceY = math.clamp((Vector2.new(head.X, head.Y) - Vector2.new(HumPos.X, HumPos.Y)).magnitude, 2, math.huge)
                     
                     local d = (Vector2.new(HumPos.X - DistanceY, HumPos.Y - DistanceY*2) - Vector2.new(HumPos.X - DistanceY, HumPos.Y + DistanceY*2)).magnitude
-                    local healthoffset = plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth * d
+                    local hp, maxHp = getHealth(plr.Character)
+                    local healthoffset = hp / maxHp * d
                     
                     healthbar.From = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2)
                     healthbar.To = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y - DistanceY*2)
                     
                     greenhealth.From = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2)
                     greenhealth.To = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2 - healthoffset)
-                    greenhealth.Color = red:lerp(green, plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth)
+                    local hp2, maxHp2 = getHealth(plr.Character)
+                    greenhealth.Color = red:lerp(green, hp2 / maxHp2)
                     
                     healthbar.Visible = true
                     greenhealth.Visible = true
@@ -367,7 +393,7 @@ local function CreateTracerESP(plr)
     local function Update()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("HumanoidRootPart") and plr ~= LocalPlayer and plr.Character.Humanoid.Health > 0 then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr ~= LocalPlayer and isAlive(plr.Character) then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     Tracer.Visible = false
                     return
@@ -409,17 +435,19 @@ local function CreateSkeletonESP(plr)
     local function UpdateSkeleton()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and isAlive(plr.Character) then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     for _, v in pairs(limbs) do if v then v.Visible = false end end
                     return
                 end
                 local _, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
                 if vis then
-                    local isR15 = (plr.Character.Humanoid.RigType == Enum.HumanoidRigType.R15)
+                    local isR15 = isR15Like(plr.Character)
                     if isR15 then
+                        local torsoRef = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
+                        if not torsoRef then for _, v in pairs(limbs) do if v then v.Visible = false end end return end
                         local Head = Camera:WorldToViewportPoint(plr.Character.Head.Position)
-                        local UpperTorso = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
+                        local UpperTorso = Camera:WorldToViewportPoint(torsoRef.Position)
                         local LowerTorso = Camera:WorldToViewportPoint(plr.Character.LowerTorso.Position)
                         local LeftUpperArm = Camera:WorldToViewportPoint(plr.Character.LeftUpperArm.Position)
                         local LeftLowerArm = Camera:WorldToViewportPoint(plr.Character.LeftLowerArm.Position)
@@ -540,7 +568,7 @@ local function CreateArrowESP(plr)
     local function UpdateArrow()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and isAlive(plr.Character) then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     arrow.Visible = false
                     return
@@ -589,7 +617,7 @@ local function Create3DBoxESP(plr)
     local function Update3D()
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and isAlive(plr.Character) then
                 if teamCheckGlobal and plr.Team == LocalPlayer.Team then
                     for i = 1, 12 do lines[i].Visible = false end
                     return
@@ -680,7 +708,7 @@ local function CreateRadar()
                         dot.Visible = false
                         return
                     end
-                    if v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+                    if v.Character and v.Character:FindFirstChild("HumanoidRootPart") and isAlive(v.Character) then
                         local relX, relZ = GetRelative(v.Character.HumanoidRootPart.Position)
                         local newPos = radarPos - Vector2.new(relX, relZ)
                         if (newPos - radarPos).magnitude < radarRadius - 2 then
