@@ -1,5 +1,5 @@
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Scoot/Library.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/Lib"))()
 local Window = Library:Window({Logo = "132447680232071", FadeTime = 0.3})
 local Watermark = Library:Watermark("EpsteinWare | discord.gg/hZAj73bwnv")
 local KeybindList = Library:KeybindList()
