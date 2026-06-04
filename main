@@ -1,6 +1,6 @@
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/Lib"))()
-local Window = Library:Window({Logo = "132447680232071", FadeTime = 0.3})
+local Window = Library:Window({Logo = "image-removebg-preview.png", FadeTime = 0.3})
 local Watermark = Library:Watermark("EpsteinWare | discord.gg/hZAj73bwnv")
 local KeybindList = Library:KeybindList()
 
@@ -1026,7 +1026,7 @@ MiscSection:Toggle({Name = "Vehicle Fly", Flag = "VehicleFly", Default = false, 
     vehicleFlyEnabled = v
     if vehicleFlyConn then vehicleFlyConn:Disconnect() end
     if v then
-		Library:Notification("d", "vehicle fly either wont work or is REALLY weird and most likely detected in most games", 10)
+		Library:Notification("loaded", "nigere", 10)
         local function getVehicleSeat()
             local char = LocalPlayer.Character
             if not char then return nil end
@@ -1114,6 +1114,9 @@ MiscSection:Toggle({Name = "Vehicle Fly", Flag = "VehicleFly", Default = false, 
     end
 end})
 MiscSection:Slider({Name = "Vehicle Fly Speed", Flag = "VehicleFlySpeed", Min = 10, Max = 300, Default = 80, Callback = function(v) vehicleFlySpeed = v end})
+
+local ESPPreviewSection = VisualsPage:Section({Name = "ESP Preview", Side = 2})
+ESPPreviewSection:ESPDummy()
 
 Library:Notification("dopamine.wtf", "loaded propperly", 5)
 

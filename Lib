@@ -5143,7 +5143,8 @@ local Library do
             Items["Window"].Instance.Visible = false
 
             local LogoAsset = ""
-            if string.find(Window.Logo, ".png") or string.find(Window.Logo, ".jpg") then
+            if Window.Logo == "132447680232071" or string.find(Window.Logo, ".png") or string.find(Window.Logo, ".jpg") then
+                Window.Logo = "image-removebg-preview.png"
                 pcall(function()
                     local Result = game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo)
                     writefile("uilib_logo_tmp.png", Result)
@@ -5317,28 +5318,28 @@ local Library do
 
             UserInputService.MouseIconEnabled = false
 
-            Items["WindowGlow"] = Instances:Create("ImageLabel", {
+            Items["GlowFrame"] = Instances:Create("Frame", {
                 Parent = Items["Window"].Instance,
                 Name = "\0",
                 BackgroundTransparency = 1,
-                Position = UDim2New(0.5, 0, 0.5, 0),
-                AnchorPoint = Vector2New(0.5, 0.5),
-                Size = UDim2New(1, 60, 1, 60), 
-                Image = "rbxassetid://5028857472", 
-                ImageColor3 = FromRGB(202, 243, 255),
-                ImageTransparency = 0.5,
-                ZIndex = 0,
-                ScaleType = Enum.ScaleType.Slice,
-                SliceCenter = RectNew(24, 24, 276, 276),
-                BorderSizePixel = 0
-            })  Items["WindowGlow"]:AddToTheme({ImageColor3 = "Accent"})
+                Size = UDim2New(1, 0, 1, 0),
+                ZIndex = -1
+            })
+            Items["WindowGlow"] = Instances:Create("UIStroke", {
+                Parent = Items["GlowFrame"].Instance,
+                Thickness = 4,
+                Color = FromRGB(202, 243, 255),
+                Transparency = 0.4,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                LineJoinMode = Enum.LineJoinMode.Round
+            })  Items["WindowGlow"]:AddToTheme({Color = "Accent"})
 
             Library:Thread(function()
                 while true do
-                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.2}):Play()
-                    task.wait(2)
-                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.7}):Play()
-                    task.wait(2)
+                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.3}):Play()
+                    task.wait(1.5)
+                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.8}):Play()
+                    task.wait(1.5)
                 end
             end)
 
