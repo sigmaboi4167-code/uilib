@@ -4793,8 +4793,8 @@ local Library do
             Items["Watermark"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                AnchorPoint = Vector2New(0.5, 1),
-                Position = UDim2New(0.5, 0, 1, -12),
+                AnchorPoint = Vector2New(0, 0),
+                Position = UDim2New(0, 12, 0, 12),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -4848,6 +4848,64 @@ local Library do
                 BackgroundColor3 = FromRGB(202, 243, 255)
             })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
+            Items["Stats"] = Instances:Create("Frame", {
+                Parent = Library.Holder.Instance,
+                Name = "\0",
+                AnchorPoint = Vector2New(1, 0),
+                Position = UDim2New(1, -12, 0, 12),
+                BorderColor3 = FromRGB(12, 12, 12),
+                BorderSizePixel = 2,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundColor3 = FromRGB(14, 17, 15)
+            })  Items["Stats"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
+
+            Items["Stats"]:MakeDraggable()
+
+            Instances:Create("UIStroke", {
+                Parent = Items["Stats"].Instance,
+                Name = "\0",
+                Color = FromRGB(42, 49, 45),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Outline"})
+
+            Instances:Create("UIPadding", {
+                Parent = Items["Stats"].Instance,
+                Name = "\0",
+                PaddingTop = UDimNew(0, 5),
+                PaddingBottom = UDimNew(0, 7),
+                PaddingRight = UDimNew(0, 5),
+                PaddingLeft = UDimNew(0, 5)
+            })
+
+            Items["StatsText"] = Instances:Create("TextLabel", {
+                Parent = Items["Stats"].Instance,
+                Name = "\0",
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(235, 235, 235),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = "Loading...",
+                Position = UDim2New(0, 0, 0, 2),
+                BackgroundTransparency = 1,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                TextSize = 9,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  Items["StatsText"]:AddToTheme({TextColor3 = "Text"})
+
+            Items["StatsText"]:TextBorder()
+
+            Items["StatsLiner"] = Instances:Create("Frame", {
+                Parent = Items["Stats"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, -5, 0, -5),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 10, 0, 1),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(202, 243, 255)
+            })  Items["StatsLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
             local cheatName = "EpsteinWare"
             local parts = string.split(Name, "|")
             if #parts > 0 then
@@ -4855,21 +4913,35 @@ local Library do
             end
 
             local GameName = game.Name or "Roblox"
+            local MarketplaceService = game:GetService("MarketplaceService")
+            local StatsService = game:GetService("Stats")
             Library:Thread(function()
                 pcall(function()
-                    GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+                    GameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
                 end)
             end)
 
             local fps = 60
+            local ping = "0 ms"
             Library:Connect(RunService.RenderStepped, function(dt)
                 fps = math.round(Library:Lerp(fps, 1 / dt, 0.05))
-                Items["Text"].Instance.Text = string.format("%s | %s | discord.gg/fqRKstBTBF | %d FPS", cheatName, GameName, fps)
+                pcall(function()
+                    local network = StatsService:FindFirstChild("Network")
+                    local serverStats = network and network:FindFirstChild("ServerStatsItem")
+                    local pingItem = serverStats and serverStats:FindFirstChild("Data Ping")
+                    if pingItem then
+                        ping = pingItem:GetValueString()
+                    end
+                end)
+
+                Items["Text"].Instance.Text = string.format("%s | discord.gg/fqRKstBTBF | %s", cheatName, GameName)
+                Items["StatsText"].Instance.Text = string.format("%s | %d FPS", ping, fps)
             end)
         end
 
         function Watermark:SetVisibility(Bool)
             Items["Watermark"].Instance.Visible = Bool
+            Items["Stats"].Instance.Visible = Bool
         end
 
         return Watermark
@@ -5000,6 +5072,156 @@ local Library do
         end
 
         return KeybindList
+    end
+
+    Library.TargetInfo = function(self)
+        local TargetInfo = { }
+
+        local Items = { } do
+            Items["TargetInfo"] = Instances:Create("Frame", {
+                Parent = Library.Holder.Instance,
+                Name = "\0",
+                AnchorPoint = Vector2New(0, 1),
+                Position = UDim2New(0, 12, 1, -88),
+                BorderColor3 = FromRGB(12, 12, 12),
+                BorderSizePixel = 2,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundColor3 = FromRGB(14, 17, 15)
+            })  Items["TargetInfo"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
+
+            Items["TargetInfo"]:MakeDraggable()
+
+            Instances:Create("UIStroke", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                Color = FromRGB(42, 49, 45),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Outline"})
+
+            Instances:Create("UIPadding", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                PaddingTop = UDimNew(0, 5),
+                PaddingBottom = UDimNew(0, 7),
+                PaddingRight = UDimNew(0, 5),
+                PaddingLeft = UDimNew(0, 5)
+            })
+
+            Items["Title"] = Instances:Create("TextLabel", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(235, 235, 235),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = "Target Info",
+                Size = UDim2New(0, 0, 0, 15),
+                BackgroundTransparency = 1,
+                Position = UDim2New(0, 0, 0, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 9,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
+            Items["Title"]:TextBorder()
+
+            Items["Liner"] = Instances:Create("Frame", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, -5, 0, 15),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 10, 0, 1),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(202, 243, 255)
+            })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+            Items["OuterGlow"] = Instances:Create("ImageLabel", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://1316045117",
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.84,
+                ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = Rect.new(10, 10, 118, 118),
+                Position = UDim2New(0, -14, 0, -14),
+                Size = UDim2New(1, 28, 1, 28),
+                ZIndex = 0
+            })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
+
+            Items["Content"] = Instances:Create("Frame", {
+                Parent = Items["TargetInfo"].Instance,
+                Name = "\0",
+                BorderColor3 = FromRGB(0, 0, 0),
+                BackgroundTransparency = 1,
+                Position = UDim2New(0, 0, 0, 22),
+                Size = UDim2New(0, 0, 0, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })
+
+            local contentLayout = Instances:Create("UIListLayout", {
+                Parent = Items["Content"].Instance,
+                Name = "\0",
+                Padding = UDimNew(0, 2),
+                SortOrder = Enum.SortOrder.LayoutOrder
+            })
+            contentLayout.Instance.VerticalAlignment = Enum.VerticalAlignment.Top
+
+            local function makeLine(name)
+                return Instances:Create("TextLabel", {
+                    Parent = Items["Content"].Instance,
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextColor3 = FromRGB(235, 235, 235),
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Text = name .. ": None",
+                    Size = UDim2New(0, 0, 0, 14),
+                    BackgroundTransparency = 1,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    TextSize = 9,
+                    BackgroundColor3 = FromRGB(255, 255, 255)
+                })
+            end
+
+            Items["Target"] = makeLine("Target")
+            Items["Display"] = makeLine("Display")
+            Items["Health"] = makeLine("Health")
+            Items["Distance"] = makeLine("Distance")
+            Items["Team"] = makeLine("Team")
+
+            for _, item in ipairs({Items["Target"], Items["Display"], Items["Health"], Items["Distance"], Items["Team"]}) do
+                item:AddToTheme({TextColor3 = "Text"})
+                item:TextBorder()
+                item.Instance.ZIndex = 2
+            end
+        end
+
+        function TargetInfo:SetVisibility(Bool)
+            Items["TargetInfo"].Instance.Visible = Bool
+        end
+
+        function TargetInfo:SetTarget(TargetData)
+            if not TargetData then
+                Items["Target"].Instance.Text = "Target: None"
+                Items["Display"].Instance.Text = "Display: None"
+                Items["Health"].Instance.Text = "Health: None"
+                Items["Distance"].Instance.Text = "Distance: None"
+                Items["Team"].Instance.Text = "Team: None"
+                return
+            end
+
+            Items["Target"].Instance.Text = "Target: " .. tostring(TargetData.Name or "None")
+            Items["Display"].Instance.Text = "Display: " .. tostring(TargetData.DisplayName or TargetData.Name or "None")
+            Items["Health"].Instance.Text = string.format("Health: %s/%s", tostring(TargetData.Health or 0), tostring(TargetData.MaxHealth or 0))
+            Items["Distance"].Instance.Text = "Distance: " .. tostring(TargetData.Distance or "0") .. " studs"
+            Items["Team"].Instance.Text = "Team: " .. tostring(TargetData.Team or "None")
+        end
+
+        return TargetInfo
     end
 
     Library.Notification = function(self, Title, Description, Duration)
@@ -6907,7 +7129,7 @@ local Library do
         return BlankElement, Items
     end
 
-    Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
+    Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList, TargetInfo)
         local SettingsPage = Window:Page({Name = "Settings", SubPages = true}) do 
             local ThemingSubPage = SettingsPage:SubPage({Name = "Theming", Columns = 2}) do 
                 local ThemesSection = ThemingSubPage:Section({Name = "Themes", Side = 1}) do
@@ -7018,6 +7240,17 @@ local Library do
                             KeybindList:SetVisibility(Value)
                         end
                     })
+
+                    if TargetInfo then
+                        SettingsSection:Toggle({
+                            Name = "Target info",
+                            Flag = "Target info",
+                            Default = true,
+                            Callback = function(Value)
+                                TargetInfo:SetVisibility(Value)
+                            end
+                        })
+                    end
 
                     SettingsSection:Slider({
                         Name = "Fade time",

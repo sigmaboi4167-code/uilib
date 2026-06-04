@@ -3,11 +3,12 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sigma
 local Window = Library:Window({Logo = "uilogo.png", FadeTime = 0.3})
 local Watermark = Library:Watermark("EpsteinWare | discord.gg/fqRKstBTBF")
 local KeybindList = Library:KeybindList()
+local TargetInfo = Library:TargetInfo()
 
 local AimbotPage = Window:Page({Name = "Aimbot", Columns = 2})
 local VisualsPage = Window:Page({Name = "Visuals", Columns = 2})
 local MiscPage = Window:Page({Name = "Misc", Columns = 2})
-local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList)
+local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList, TargetInfo)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -73,6 +74,33 @@ local function GetClosestPlayerToCursor()
     return target
 end
 
+local function GetTargetInfoData()
+    local target = GetClosestPlayerToCursor()
+    if not target or not target.Character or not isAlive(target.Character) then
+        return nil
+    end
+
+    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+    local localCharacter = LocalPlayer.Character
+    local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+    local distance = 0
+
+    if targetRoot and localRoot then
+        distance = math.floor((targetRoot.Position - localRoot.Position).Magnitude + 0.5)
+    end
+
+    local health, maxHealth = getHealth(target.Character)
+
+    return {
+        Name = target.Name,
+        DisplayName = target.DisplayName or target.Name,
+        Health = health,
+        MaxHealth = maxHealth,
+        Distance = distance,
+        Team = target.Team and target.Team.Name or "None"
+    }
+end
+
 local function StartAimbot()
     if aimbotLoop then aimbotLoop:Disconnect() end
     aimbotLoop = RunService.RenderStepped:Connect(function()
@@ -114,6 +142,9 @@ local function UpdateFoVCircle()
 end
 
 RunService.RenderStepped:Connect(UpdateFoVCircle)
+RunService.RenderStepped:Connect(function()
+    TargetInfo:SetTarget(GetTargetInfoData())
+end)
 
 local AimbotSection = AimbotPage:Section({Name = "Camera Aimbot", Side = 1})
 AimbotSection:Toggle({Name = "Enabled", Flag = "AimbotEnabled", Default = false, Callback = function(v)
