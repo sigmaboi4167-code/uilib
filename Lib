@@ -263,7 +263,7 @@ local Library do
         Tween.__index = Tween
 
         Tween.Create = function(self, Item, Info, Goal, IsRawItem)
-            Item = IsRawItem and Item or Item.Instance
+            Item = IsRawItem and Item or (type(Item) == "table" and Item.Instance or Item)
             Info = Info or TweenInfo.new(Library.Tween.Time, Library.Tween.Style, Library.Tween.Direction)
 
             local NewTween = {
@@ -6357,7 +6357,7 @@ local Library do
             }
 
             local NewColorpicker, ColorpickerItems = Components:Colorpicker({
-                Name = Colorpicker.Name,
+                Name = self.Name,
                 Parent = LabelItems["SubElements"],
                 Pages = true,
                 Page = Colorpicker.Page,
@@ -6385,7 +6385,7 @@ local Library do
             }
 
             local NewKeybind, KeybindItems = Components:Keybind({
-                Name = Label.Name,
+                Name = self.Name,
                 Parent = LabelItems["SubElements"],
                 Page = Keybind.Page,
                 Flag = Keybind.Flag,
