@@ -119,6 +119,7 @@ local Library do
         UnusedHolder = nil,
         Font = nil,
         KeyList = nil,
+        BlurEffects = { },
 
         Colorpickers = { },
     }
@@ -830,6 +831,15 @@ local Library do
         for Index, Value in self.Threads do 
             coroutine.close(Value)
         end
+
+        for Index, Value in self.BlurEffects do
+            pcall(function()
+                if Value then
+                    Value:Destroy()
+                end
+            end)
+        end
+        self.BlurEffects = { }
 
         if self.Holder then 
             self.Holder:Clean()
@@ -4793,8 +4803,8 @@ local Library do
             Items["Watermark"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                AnchorPoint = Vector2New(0, 0),
-                Position = UDim2New(0, 12, 0, 12),
+                AnchorPoint = Vector2New(0.5, 0),
+                Position = UDim2New(0.5, 0, 0, 12),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -4851,8 +4861,8 @@ local Library do
             Items["Stats"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                AnchorPoint = Vector2New(1, 0),
-                Position = UDim2New(1, -12, 0, 12),
+                AnchorPoint = Vector2New(0.5, 1),
+                Position = UDim2New(0.5, 0, 1, -12),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -4924,13 +4934,21 @@ local Library do
             local fps = 60
             local ping = "0 ms"
             Library:Connect(RunService.RenderStepped, function(dt)
-                fps = math.round(Library:Lerp(fps, 1 / dt, 0.05))
+                local safeDt = math.max(dt or 0, 1 / 240)
+                local instantFps = math.floor((1 / safeDt) + 0.5)
+                fps = math.floor(Library:Lerp(fps, instantFps, 0.12) + 0.5)
                 pcall(function()
                     local network = StatsService:FindFirstChild("Network")
                     local serverStats = network and network:FindFirstChild("ServerStatsItem")
                     local pingItem = serverStats and serverStats:FindFirstChild("Data Ping")
                     if pingItem then
-                        ping = pingItem:GetValueString()
+                        local pingValue = pingItem:GetValueString()
+                        local numericPing = string.match(pingValue, "%d+")
+                        if numericPing then
+                            ping = numericPing .. " ms"
+                        else
+                            ping = pingValue
+                        end
                     end
                 end)
 
@@ -5661,6 +5679,7 @@ local Library do
                 Parent = game:GetService("Lighting"),
                 Size = 0
             })
+            TableInsert(Library.BlurEffects, Items["Blur"].Instance)
 
             Library:Thread(function()
                 while true do
@@ -5791,7 +5810,8 @@ local Library do
         end
 
         Library:Connect(UserInputService.InputBegan, function(Input)
-            if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+            local menuKeybind = tostring(Library.MenuKeybind)
+            if tostring(Input.KeyCode) == menuKeybind or tostring(Input.UserInputType) == menuKeybind then
                 Window:SetOpen(not Window.IsOpen)
             end
         end)
