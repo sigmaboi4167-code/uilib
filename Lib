@@ -5401,6 +5401,8 @@ local Library do
                 Visible = false,
                 ScaleType = Enum.ScaleType.Slice,
                 SliceCenter = Rect.new(10, 10, 118, 118),
+                Position = UDim2New(0, -18, 0, -18),
+                Size = UDim2New(1, 36, 1, 36),
                 ZIndex = 0
             })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
 
@@ -6053,6 +6055,20 @@ local Library do
 
             Items["Section"]:Border("Border")
 
+            Items["OuterGlow"] = Instances:Create("ImageLabel", {
+                Parent = Items["Section"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://1316045117",
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.82,
+                ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = Rect.new(10, 10, 118, 118),
+                Position = UDim2New(0, -14, 0, -14),
+                Size = UDim2New(1, 28, 1, 28),
+                ZIndex = 0
+            })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
+
             Items["Liner"] = Instances:Create("Frame", {
                 Parent = Items["Section"].Instance,
                 Name = "\0",
@@ -6095,6 +6111,7 @@ local Library do
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
             Items["Text"]:TextBorder()
+            Items["Text"].Instance.ZIndex = 2
 
             Instances:Create("UIPadding", {
                 Parent = Items["Section"].Instance,
