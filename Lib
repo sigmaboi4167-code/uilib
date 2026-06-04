@@ -5142,6 +5142,17 @@ local Library do
 
             Items["Window"].Instance.Visible = false
 
+            local LogoAsset = ""
+            if string.find(Window.Logo, ".png") or string.find(Window.Logo, ".jpg") then
+                pcall(function()
+                    local Result = game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo)
+                    writefile("uilib_logo_tmp.png", Result)
+                    LogoAsset = getcustomasset("uilib_logo_tmp.png")
+                end)
+            else
+                LogoAsset = "rbxassetid://" .. Window.Logo
+            end
+
             Items["Logo"] = Instances:Create("ImageLabel", {
                 Parent = Items["Side"].Instance,
                 Name = "\0",
@@ -5149,7 +5160,7 @@ local Library do
                 ScaleType = Enum.ScaleType.Fit,
                 BorderColor3 = FromRGB(0, 0, 0),
                 AnchorPoint = Vector2New(0.5, 0),
-                Image = "rbxassetid://" .. Window.Logo,
+                Image = LogoAsset,
                 BackgroundTransparency = 1,
                 Position = UDim2New(0.5, 0, 0, 12),
                 Size = UDim2New(0, 75, 0, 75),
@@ -5306,6 +5317,65 @@ local Library do
 
             UserInputService.MouseIconEnabled = false
 
+            Items["WindowGlow"] = Instances:Create("ImageLabel", {
+                Parent = Items["Window"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Position = UDim2New(0.5, 0, 0.5, 0),
+                AnchorPoint = Vector2New(0.5, 0.5),
+                Size = UDim2New(1, 60, 1, 60), 
+                Image = "rbxassetid://5028857472", 
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.5,
+                ZIndex = 0,
+                ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = RectNew(24, 24, 276, 276),
+                BorderSizePixel = 0
+            })  Items["WindowGlow"]:AddToTheme({ImageColor3 = "Accent"})
+
+            Library:Thread(function()
+                while true do
+                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.2}):Play()
+                    task.wait(2)
+                    TweenService:Create(Items["WindowGlow"].Instance, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.7}):Play()
+                    task.wait(2)
+                end
+            end)
+
+            Items["Blur"] = Instances:Create("BlurEffect", {
+                Parent = game:GetService("Lighting"),
+                Size = 0
+            })
+
+            Library:Thread(function()
+                while true do
+                    task.wait(math.random() * 0.5 + 0.1)
+                    if Window.IsOpen then
+                        local size = math.random(2, 5)
+                        local flake = Instances:Create("Frame", {
+                            Parent = Items["Window"].Instance,
+                            Size = UDim2New(0, size, 0, size),
+                            Position = UDim2New(math.random(), 0, 0, -10),
+                            BackgroundColor3 = FromRGB(255, 255, 255),
+                            BackgroundTransparency = math.random() * 0.5,
+                            BorderSizePixel = 0,
+                            ZIndex = 10
+                        })
+                        Instances:Create("UICorner", {
+                            Parent = flake.Instance,
+                            CornerRadius = UDimNew(1, 0)
+                        })
+                        local endY = 1 + (math.random() * 0.2)
+                        local duration = math.random(3, 7)
+                        local t = TweenService:Create(flake.Instance, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Position = UDim2New(math.random(), 0, endY, 0)})
+                        t:Play()
+                        task.delay(duration, function()
+                            flake.Instance:Destroy()
+                        end)
+                    end
+                end
+            end)
+
             Window.Items = Items
         end
 
@@ -5361,6 +5431,9 @@ local Library do
 
             if Window.IsOpen then 
                 Items["Window"].Instance.Visible = true 
+                TweenService:Create(Items["Blur"].Instance, TweenInfo.new(Library.FadeSpeed), {Size = 15}):Play()
+            else
+                TweenService:Create(Items["Blur"].Instance, TweenInfo.new(Library.FadeSpeed), {Size = 0}):Play()
             end
 
             local Descendants = Items["Window"].Instance:GetDescendants()
@@ -6336,6 +6409,89 @@ local Library do
         end
 
         return NewSearchbox 
+    end
+
+    Library.Sections.ESPDummy = function(self, Data)
+        Data = Data or { }
+        local ESPDummy = {
+            Window = self.Window,
+            Page = self.Page,
+            Section = self,
+            Name = Data.Name or "ESP Preview"
+        }
+
+        local Items = { } do
+            Items["Viewport"] = Instances:Create("ViewportFrame", {
+                Parent = ESPDummy.Section.Items["Content"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                BorderColor3 = FromRGB(12, 12, 12),
+                BorderSizePixel = 2,
+                Size = UDim2New(1, 0, 0, 200),
+                BackgroundColor3 = FromRGB(20, 24, 21),
+                LightColor = Color3.new(1, 1, 1),
+                LightDirection = Vector3.new(0, -1, 0),
+                Ambient = Color3.new(1, 1, 1)
+            })  Items["Viewport"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Border"})
+
+            Instances:Create("UIStroke", {
+                Parent = Items["Viewport"].Instance,
+                Color = FromRGB(42, 49, 45),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Outline"})
+
+            local CameraObj = InstanceNew("Camera")
+            CameraObj.Parent = Items["Viewport"].Instance
+            Items["Viewport"].Instance.CurrentCamera = CameraObj
+
+            local Dummy = InstanceNew("Model")
+            Dummy.Name = "Dummy"
+            Dummy.Parent = Items["Viewport"].Instance
+            
+            local function CreatePart(name, size, pos)
+                local part = InstanceNew("Part")
+                part.Name = name
+                part.Size = size
+                part.Position = pos
+                part.Anchored = true
+                part.CanCollide = false
+                part.Color = Color3.fromRGB(163, 162, 165)
+                part.Material = Enum.Material.SmoothPlastic
+                part.Parent = Dummy
+                return part
+            end
+            
+            local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 3.5, 0))
+            local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 2, 0))
+            CreatePart("Left Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 2, 0))
+            CreatePart("Right Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 2, 0))
+            CreatePart("Left Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 0, 0))
+            CreatePart("Right Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 0, 0))
+
+            Dummy.PrimaryPart = Torso
+            CameraObj.CFrame = CFrame.new(Vector3.new(0, 2, -6), Torso.Position)
+            
+            local ESPBox = InstanceNew("BoxHandleAdornment")
+            ESPBox.Size = Vector3.new(4, 5.5, 1.5)
+            ESPBox.Adornee = Torso
+            ESPBox.ZIndex = 1
+            ESPBox.AlwaysOnTop = true
+            ESPBox.Transparency = 0.5
+            ESPBox.Color3 = Color3.fromRGB(255, 0, 0)
+            ESPBox.Parent = Dummy
+            
+            Items["ESPBox"] = ESPBox
+        end
+
+        function ESPDummy:SetBoxColor(Color)
+            Items["ESPBox"].Color3 = Color
+        end
+        function ESPDummy:SetBoxTransparency(Trans)
+            Items["ESPBox"].Transparency = Trans
+        end
+
+        return ESPDummy
     end
 
     Library.BlankElement = function(self, Data)

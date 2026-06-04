@@ -1026,7 +1026,7 @@ MiscSection:Toggle({Name = "Vehicle Fly", Flag = "VehicleFly", Default = false, 
     vehicleFlyEnabled = v
     if vehicleFlyConn then vehicleFlyConn:Disconnect() end
     if v then
-		Library:Notification("dopamine.wtf", "vehicle fly either wont work or is REALLY weird and most likely detected in most games", 10)
+		Library:Notification("d", "vehicle fly either wont work or is REALLY weird and most likely detected in most games", 10)
         local function getVehicleSeat()
             local char = LocalPlayer.Character
             if not char then return nil end
