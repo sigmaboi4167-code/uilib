@@ -4864,7 +4864,7 @@ local Library do
             local fps = 60
             Library:Connect(RunService.RenderStepped, function(dt)
                 fps = math.round(Library:Lerp(fps, 1 / dt, 0.05))
-                Items["Text"].Instance.Text = string.format("%s | %d FPS | %s | discord.gg/fqRKstBTBF", cheatName, fps, GameName)
+                Items["Text"].Instance.Text = string.format("%s | %s | discord.gg/fqRKstBTBF | %d FPS", cheatName, GameName, fps)
             end)
         end
 
@@ -5387,18 +5387,38 @@ local Library do
             })  Items["WindowLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
             Items["OuterGlow"] = Instances:Create("ImageLabel", {
-                Parent = Items["Window"].Instance,
+                Parent = Library.Holder.Instance,
                 Name = "\0",
                 BackgroundTransparency = 1,
-                Position = UDim2New(0, -15, 0, -15),
-                Size = UDim2New(1, 30, 1, 30),
                 Image = "rbxassetid://1316045117",
                 ImageColor3 = FromRGB(202, 243, 255),
-                ImageTransparency = 0.45,
+                ImageTransparency = 1,
+                Visible = false,
                 ScaleType = Enum.ScaleType.Slice,
                 SliceCenter = Rect.new(10, 10, 118, 118),
-                ZIndex = -10
+                ZIndex = 1
             })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
+
+            Items["Window"].Instance.ZIndex = 2
+
+            local function updateGlow()
+                Items["OuterGlow"].Instance.Position = UDim2New(
+                    Items["Window"].Instance.Position.X.Scale,
+                    Items["Window"].Instance.Position.X.Offset - 15,
+                    Items["Window"].Instance.Position.Y.Scale,
+                    Items["Window"].Instance.Position.Y.Offset - 15
+                )
+                Items["OuterGlow"].Instance.Size = UDim2New(
+                    Items["Window"].Instance.Size.X.Scale,
+                    Items["Window"].Instance.Size.X.Offset + 30,
+                    Items["Window"].Instance.Size.Y.Scale,
+                    Items["Window"].Instance.Size.Y.Offset + 30
+                )
+            end
+
+            Library:Connect(Items["Window"].Instance:GetPropertyChangedSignal("Position"), updateGlow)
+            Library:Connect(Items["Window"].Instance:GetPropertyChangedSignal("Size"), updateGlow)
+            updateGlow()
 
             Items["SnowArea"] = Instances:Create("Frame", {
                 Parent = Items["Window"].Instance,
@@ -5500,8 +5520,11 @@ local Library do
 
             if Window.IsOpen then 
                 Items["Window"].Instance.Visible = true 
+                Items["OuterGlow"].Instance.Visible = true
+                TweenService:Create(Items["OuterGlow"].Instance, TweenInfo.new(Library.FadeSpeed), {ImageTransparency = 0.45}):Play()
                 TweenService:Create(Items["Blur"].Instance, TweenInfo.new(Library.FadeSpeed), {Size = 15}):Play()
             else
+                TweenService:Create(Items["OuterGlow"].Instance, TweenInfo.new(Library.FadeSpeed), {ImageTransparency = 1}):Play()
                 TweenService:Create(Items["Blur"].Instance, TweenInfo.new(Library.FadeSpeed), {Size = 0}):Play()
             end
 
@@ -5529,6 +5552,7 @@ local Library do
             NewTween.Tween.Completed:Connect(function()
                 Debounce = false 
                 Items["Window"].Instance.Visible = Window.IsOpen
+                Items["OuterGlow"].Instance.Visible = Window.IsOpen
                 if Window.IsOpen then
                     Items["MouseBackground"].Instance.Visible = true
                     UserInputService.MouseIconEnabled = false
