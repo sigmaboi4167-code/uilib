@@ -3983,7 +3983,7 @@ local Library do
 
             local Update = function()
                 if KeylistItem then
-                    KeylistItem:SetText(Keybind.Value, Data.Name, Keybind.Mode)
+                    KeylistItem:SetText(Keybind.Value or "None", Data.Name, Keybind.Mode)
                     KeylistItem:SetStatus(Keybind.Toggled)
                 end
             end
@@ -4978,7 +4978,7 @@ local Library do
             NewKey:TextBorder()
 
             function NewKey:SetText(Key, Name, Mode)
-                NewKey.Instance.Text = "" ..Key .." - " ..Name .. " ("..Mode..")"
+                NewKey.Instance.Text = tostring(Key or "None") .. " - " .. tostring(Name or "None") .. " (" .. tostring(Mode or "None") .. ")"
             end
 
             function NewKey:SetStatus(Bool)
@@ -5204,7 +5204,7 @@ local Library do
             Items["Logo"] = Instances:Create("ImageLabel", {
                 Parent = Items["Side"].Instance,
                 Name = "\0",
-                ImageColor3 = FromRGB(202, 243, 255),
+                ImageColor3 = FromRGB(255, 255, 255),
                 ScaleType = Enum.ScaleType.Fit,
                 BorderColor3 = FromRGB(0, 0, 0),
                 AnchorPoint = Vector2New(0.5, 0),
@@ -5215,7 +5215,7 @@ local Library do
                 BorderSizePixel = 0,
                 ZIndex = 2,
                 BackgroundColor3 = FromRGB(255, 255, 255)
-            })  Items["Logo"]:AddToTheme({ImageColor3 = "Accent"})
+            })
 
             Library:Thread(function()
                 while true do
