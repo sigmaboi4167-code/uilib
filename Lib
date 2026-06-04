@@ -1078,7 +1078,7 @@ local Library do
                     BorderColor3 = FromRGB(12, 12, 12),
                     Size = Data.Size,
                     BorderSizePixel = 2,
-                    ClipsDescendants = true,
+                    ClipsDescendants = false,
                     BackgroundColor3 = FromRGB(14, 17, 15)
                 })  Items["Window"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
 
@@ -4847,6 +4847,25 @@ local Library do
                 BorderSizePixel = 0,
                 BackgroundColor3 = FromRGB(202, 243, 255)
             })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+            local cheatName = "EpsteinWare"
+            local parts = string.split(Name, "|")
+            if #parts > 0 then
+                cheatName = string.gsub(parts[1], "^%s*(.-)%s*$", "%1")
+            end
+
+            local GameName = game.Name or "Roblox"
+            Library:Thread(function()
+                pcall(function()
+                    GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+                end)
+            end)
+
+            local fps = 60
+            Library:Connect(RunService.RenderStepped, function(dt)
+                fps = math.round(Library:Lerp(fps, 1 / dt, 0.05))
+                Items["Text"].Instance.Text = string.format("%s | %d FPS | %s | discord.gg/fqRKstBTBF", cheatName, fps, GameName)
+            end)
         end
 
         function Watermark:SetVisibility(Bool)
@@ -5146,14 +5165,41 @@ local Library do
             local LogoAsset = ""
             if Window.Logo == "132447680232071" or string.find(Window.Logo, ".png") or string.find(Window.Logo, ".jpg") then
                 Window.Logo = "image-removebg-preview.png"
+                local success = false
                 pcall(function()
-                    local Result = game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo)
-                    writefile("image-removebg-preview.png", Result)
-                    LogoAsset = getcustomasset("image-removebg-preview.png")
+                    local url = "https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/" .. Window.Logo
+                    local req = (syn and syn.request) or (http and http.request) or request
+                    if req then
+                        local res = req({
+                            Url = url,
+                            Method = "GET"
+                        })
+                        if res and res.StatusCode == 200 then
+                            writefile(Window.Logo, res.Body)
+                            success = true
+                        end
+                    end
+                    if not success then
+                        writefile(Window.Logo, game:HttpGet(url))
+                    end
+                    LogoAsset = getcustomasset(Window.Logo)
                 end)
             else
                 LogoAsset = "rbxassetid://" .. Window.Logo
             end
+
+            Items["LogoGlow"] = Instances:Create("ImageLabel", {
+                Parent = Items["Side"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                AnchorPoint = Vector2New(0.5, 0.5),
+                Position = UDim2New(0.5, 0, 0, 75),
+                Size = UDim2New(0, 160, 0, 160),
+                Image = "rbxassetid://1316045117",
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.65,
+                ZIndex = 1
+            })  Items["LogoGlow"]:AddToTheme({ImageColor3 = "Accent"})
 
             Items["Logo"] = Instances:Create("ImageLabel", {
                 Parent = Items["Side"].Instance,
@@ -5164,11 +5210,23 @@ local Library do
                 AnchorPoint = Vector2New(0.5, 0),
                 Image = LogoAsset,
                 BackgroundTransparency = 1,
-                Position = UDim2New(0.5, 0, 0, 12),
-                Size = UDim2New(0, 75, 0, 75),
+                Position = UDim2New(0.5, 0, 0, 15),
+                Size = UDim2New(0, 120, 0, 120),
                 BorderSizePixel = 0,
+                ZIndex = 2,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Logo"]:AddToTheme({ImageColor3 = "Accent"})
+
+            Library:Thread(function()
+                while true do
+                    local tweenIn = TweenService:Create(Items["LogoGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.4})
+                    tweenIn:Play()
+                    tweenIn.Completed:Wait()
+                    local tweenOut = TweenService:Create(Items["LogoGlow"].Instance, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0.8})
+                    tweenOut:Play()
+                    tweenOut.Completed:Wait()
+                end
+            end)
 
             Items["Search"] = Instances:Create("Frame", {
                 Parent = Items["Side"].Instance,
@@ -5231,9 +5289,9 @@ local Library do
                 Parent = Items["Side"].Instance,
                 Name = "\0",
                 BackgroundTransparency = 1,
-                Position = UDim2New(0, 0, 0, 100),
+                Position = UDim2New(0, 0, 0, 145),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Size = UDim2New(1, 0, 1, -135),
+                Size = UDim2New(1, 0, 1, -180),
                 BorderSizePixel = 0,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })
@@ -5328,20 +5386,28 @@ local Library do
                 BackgroundColor3 = FromRGB(202, 243, 255)
             })  Items["WindowLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
-            Items["WindowGlow"] = Instances:Create("Frame", {
+            Items["OuterGlow"] = Instances:Create("ImageLabel", {
                 Parent = Items["Window"].Instance,
                 Name = "\0",
-                BorderColor3 = FromRGB(0, 0, 0),
-                Size = UDim2New(1, 0, 0, 15),
-                BorderSizePixel = 0,
-                BackgroundColor3 = FromRGB(202, 243, 255)
-            })  Items["WindowGlow"]:AddToTheme({BackgroundColor3 = "Accent"})
+                BackgroundTransparency = 1,
+                Position = UDim2New(0, -15, 0, -15),
+                Size = UDim2New(1, 30, 1, 30),
+                Image = "rbxassetid://1316045117",
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.45,
+                ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = Rect.new(10, 10, 118, 118),
+                ZIndex = -10
+            })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
 
-            Instances:Create("UIGradient", {
-                Parent = Items["WindowGlow"].Instance,
+            Items["SnowArea"] = Instances:Create("Frame", {
+                Parent = Items["Window"].Instance,
                 Name = "\0",
-                Rotation = 90,
-                Transparency = NumSequence{NumSequenceKeypoint(0, 0), NumSequenceKeypoint(0.193, 0.8687499761581421), NumSequenceKeypoint(0.504, 0.96875), NumSequenceKeypoint(1, 1)}
+                BackgroundTransparency = 1,
+                Size = UDim2New(1, 0, 1, 0),
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+                ZIndex = 1
             })
 
             Items["Blur"] = Instances:Create("BlurEffect", {
@@ -5356,7 +5422,7 @@ local Library do
                         local size = math.random(2, 4)
                         local startX = math.random() * 0.8 + 0.1
                         local flake = Instances:Create("Frame", {
-                            Parent = Items["Window"].Instance,
+                            Parent = Items["SnowArea"].Instance,
                             Size = UDim2New(0, size, 0, size),
                             Position = UDim2New(startX, 0, 0, -5),
                             BackgroundColor3 = FromRGB(255, 255, 255),
@@ -6452,6 +6518,59 @@ local Library do
             local worldModel = InstanceNew("WorldModel")
             worldModel.Parent = Items["Viewport"].Instance
 
+            local overlay = InstanceNew("Frame")
+            overlay.Size = UDim2New(1, 0, 1, 0)
+            overlay.BackgroundTransparency = 1
+            overlay.BorderSizePixel = 0
+            overlay.Parent = Items["Viewport"].Instance
+
+            local function clearOverlay()
+                for _, child in ipairs(overlay:GetChildren()) do
+                    child:Destroy()
+                end
+            end
+
+            local function drawLine(p1, p2, thickness, color, parent)
+                local diff = p2 - p1
+                local dist = diff.Magnitude
+                local angle = math.deg(math.atan2(diff.Y, diff.X))
+                
+                local line = InstanceNew("Frame")
+                line.Size = UDim2New(0, dist, 0, thickness)
+                line.Position = UDim2New(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
+                line.AnchorPoint = Vector2New(0.5, 0.5)
+                line.Rotation = angle
+                line.BackgroundColor3 = color
+                line.BorderSizePixel = 0
+                line.Parent = parent
+                return line
+            end
+
+            local R6Bones = {
+                {"Head", "Torso"},
+                {"Torso", "Left Arm"},
+                {"Torso", "Right Arm"},
+                {"Torso", "Left Leg"},
+                {"Torso", "Right Leg"}
+            }
+
+            local R15Bones = {
+                {"Head", "UpperTorso"},
+                {"UpperTorso", "LowerTorso"},
+                {"UpperTorso", "LeftUpperArm"},
+                {"LeftUpperArm", "LeftLowerArm"},
+                {"LeftLowerArm", "LeftHand"},
+                {"UpperTorso", "RightUpperArm"},
+                {"RightUpperArm", "RightLowerArm"},
+                {"RightLowerArm", "RightHand"},
+                {"LowerTorso", "LeftUpperLeg"},
+                {"LeftUpperLeg", "LeftLowerLeg"},
+                {"LeftLowerLeg", "LeftFoot"},
+                {"LowerTorso", "RightUpperLeg"},
+                {"RightUpperLeg", "RightLowerLeg"},
+                {"RightLowerLeg", "RightFoot"}
+            }
+
             local spinAngle = 0
             local spinSpeed = 55
 
@@ -6573,40 +6692,131 @@ local Library do
                 local cloneModel = worldModel:FindFirstChildOfClass("Model")
                 local cloneHRP = cloneModel and cloneModel:FindFirstChild("HumanoidRootPart")
                 local centerY = cloneHRP and cloneHRP.Position.Y or 0
-                local radius = 6
+                local radius = 8.5
                 local camX = MathSin(math.rad(spinAngle)) * radius
                 local camZ = math.cos(math.rad(spinAngle)) * radius
-                local camY = centerY + 2.4
-                vpCamera.CFrame = CFrame.new(Vector3.new(camX, camY, camZ), Vector3.new(0, camY, 0))
-            end)
+                local camY = centerY + 0.5
+                vpCamera.CFrame = CFrame.new(Vector3.new(camX, camY, camZ), Vector3.new(0, centerY, 0))
 
-            local ESPBox = InstanceNew("BoxHandleAdornment")
-            ESPBox.Size = Vector3.new(4, 5.5, 1.5)
-            ESPBox.ZIndex = 1
-            ESPBox.AlwaysOnTop = true
-            ESPBox.Transparency = 0.5
-            ESPBox.Color3 = FromRGB(255, 0, 0)
+                clearOverlay()
 
-            Library:Thread(function()
-                task.wait(3)
-                local cloneModel = worldModel:FindFirstChildOfClass("Model")
-                if cloneModel then
-                    local torso = cloneModel:FindFirstChild("HumanoidRootPart") or cloneModel:FindFirstChild("Torso") or cloneModel:FindFirstChild("UpperTorso")
-                    if torso then
-                        ESPBox.Adornee = torso
-                        ESPBox.Parent = cloneModel
+                if cloneModel and cloneHRP then
+                    local minX, minY = math.huge, math.huge
+                    local maxX, maxY = -math.huge, -math.huge
+                    local hasPoints = false
+
+                    for _, part in ipairs(cloneModel:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            local cframe = part.CFrame
+                            local size = part.Size
+                            local pointsToProject = {
+                                cframe.Position,
+                                (cframe * CFrame.new(0, size.Y/2, 0)).Position,
+                                (cframe * CFrame.new(0, -size.Y/2, 0)).Position,
+                                (cframe * CFrame.new(size.X/2, 0, 0)).Position,
+                                (cframe * CFrame.new(-size.X/2, 0, 0)).Position,
+                            }
+                            for _, pos in ipairs(pointsToProject) do
+                                local screenPos, onScreen = vpCamera:WorldToViewportPoint(pos)
+                                if onScreen then
+                                    minX = math.min(minX, screenPos.X)
+                                    minY = math.min(minY, screenPos.Y)
+                                    maxX = math.max(maxX, screenPos.X)
+                                    maxY = math.max(maxY, screenPos.Y)
+                                    hasPoints = true
+                                end
+                            end
+                        end
+                    end
+
+                    if hasPoints then
+                        local accentColor = Library.Theme.Accent or FromRGB(0, 191, 255)
+
+                        -- 2D Box ESP
+                        if Library.Flags["BoxESP"] then
+                            local boxFrame = InstanceNew("Frame")
+                            boxFrame.Position = UDim2New(0, minX, 0, minY)
+                            boxFrame.Size = UDim2New(0, maxX - minX, 0, maxY - minY)
+                            boxFrame.BackgroundTransparency = 1
+                            boxFrame.BorderSizePixel = 0
+                            boxFrame.Parent = overlay
+
+                            local stroke = InstanceNew("UIStroke")
+                            stroke.Thickness = 1
+                            stroke.Color = accentColor
+                            stroke.LineJoinMode = Enum.LineJoinMode.Miter
+                            stroke.Parent = boxFrame
+                        end
+
+                        -- Health Bars
+                        if Library.Flags["HealthBars"] then
+                            local hbBg = InstanceNew("Frame")
+                            hbBg.Position = UDim2New(0, minX - 6, 0, minY)
+                            hbBg.Size = UDim2New(0, 2, 0, maxY - minY)
+                            hbBg.BackgroundColor3 = FromRGB(0, 0, 0)
+                            hbBg.BorderSizePixel = 0
+                            hbBg.Parent = overlay
+
+                            local hbFill = InstanceNew("Frame")
+                            hbFill.Position = UDim2New(0, minX - 6, 0, minY)
+                            hbFill.Size = UDim2New(0, 2, 0, maxY - minY)
+                            hbFill.BackgroundColor3 = FromRGB(0, 255, 0)
+                            hbFill.BorderSizePixel = 0
+                            hbFill.Parent = overlay
+                        end
+
+                        -- Tracers
+                        if Library.Flags["Tracers"] then
+                            local vpSize = Items["Viewport"].Instance.AbsoluteSize
+                            local p1 = Vector2New(vpSize.X / 2, vpSize.Y)
+                            local p2 = Vector2New((minX + maxX) / 2, maxY)
+                            drawLine(p1, p2, 1, accentColor, overlay)
+                        end
+
+                        -- Skeleton ESP
+                        if Library.Flags["SkeletonESP"] then
+                            local isR15 = cloneModel:FindFirstChild("UpperTorso") ~= nil
+                            local bones = isR15 and R15Bones or R6Bones
+                            for _, bone in ipairs(bones) do
+                                local p1 = cloneModel:FindFirstChild(bone[1])
+                                local p2 = cloneModel:FindFirstChild(bone[2])
+                                if p1 and p2 then
+                                    local s1, o1 = vpCamera:WorldToViewportPoint(p1.Position)
+                                    local s2, o2 = vpCamera:WorldToViewportPoint(p2.Position)
+                                    if o1 and o2 then
+                                        drawLine(Vector2New(s1.X, s1.Y), Vector2New(s2.X, s2.Y), 1, FromRGB(255, 255, 255), overlay)
+                                    end
+                                end
+                            end
+                        end
+
+                        -- 3D Box ESP
+                        if Library.Flags["3DBoxESP"] then
+                            local size = Vector3.new(2, 3, 1.5) * (cloneModel:FindFirstChild("Head") and cloneModel.Head.Size.Y or 2)
+                            local cf = cloneHRP.CFrame
+                            local corners = {
+                                cf * CFrame.new(-size.X, size.Y, -size.Z), cf * CFrame.new(-size.X, size.Y, size.Z),
+                                cf * CFrame.new(size.X, size.Y, size.Z), cf * CFrame.new(size.X, size.Y, -size.Z),
+                                cf * CFrame.new(-size.X, -size.Y, -size.Z), cf * CFrame.new(-size.X, -size.Y, size.Z),
+                                cf * CFrame.new(size.X, -size.Y, size.Z), cf * CFrame.new(size.X, -size.Y, -size.Z)
+                            }
+                            local screenCorners = {}
+                            local onScreenCount = 0
+                            for i, corner in ipairs(corners) do
+                                local v, onScreen = vpCamera:WorldToViewportPoint(corner.Position)
+                                screenCorners[i] = Vector2New(v.X, v.Y)
+                                if onScreen then onScreenCount = onScreenCount + 1 end
+                            end
+                            if onScreenCount > 0 then
+                                local edges = {{1,2},{2,3},{3,4},{4,1},{5,6},{6,7},{7,8},{8,5},{1,5},{2,6},{3,7},{4,8}}
+                                for _, edge in ipairs(edges) do
+                                    drawLine(screenCorners[edge[1]], screenCorners[edge[2]], 1, accentColor, overlay)
+                                end
+                            end
+                        end
                     end
                 end
             end)
-
-            Items["ESPBox"] = ESPBox
-        end
-
-        function ESPDummy:SetBoxColor(Color)
-            Items["ESPBox"].Color3 = Color
-        end
-        function ESPDummy:SetBoxTransparency(Trans)
-            Items["ESPBox"].Transparency = Trans
         end
 
         return ESPDummy
