@@ -1,0 +1,1129 @@
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Scoot/Library.lua"))()
+local Window = Library:Window({Logo = "132447680232071", FadeTime = 0.3})
+local Watermark = Library:Watermark("EpsteinWare | discord.gg/hZAj73bwnv")
+local KeybindList = Library:KeybindList()
+
+local AimbotPage = Window:Page({Name = "Aimbot", Columns = 2})
+local VisualsPage = Window:Page({Name = "Visuals", Columns = 2})
+local MiscPage = Window:Page({Name = "Misc", Columns = 2})
+local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Aimbot variables
+local aimbotEnabled = false
+local aimbotSmoothing = 0.3
+local aimbotFoV = 100
+local aimbotFoVEnabled = true
+local aimbotTeamCheck = false
+
+local fovCircle = nil
+local aimbotLoop = nil
+
+local function GetClosestPlayerToCursor()
+    local target = nil
+    local shortestDist = math.huge
+    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+    
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+            if (not aimbotTeamCheck) or v.Team ~= LocalPlayer.Team then
+                local headPos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                if onScreen then
+                    local screenPos = Vector2.new(headPos.X, headPos.Y)
+                    local dist = (screenPos - mousePos).Magnitude
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        target = v
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
+
+local function StartAimbot()
+    if aimbotLoop then aimbotLoop:Disconnect() end
+    aimbotLoop = RunService.RenderStepped:Connect(function()
+        if not aimbotEnabled then return end
+        
+        local pressed = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        if not pressed then return end
+        
+        local target = GetClosestPlayerToCursor()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local headPos, onScreen = Camera:WorldToViewportPoint(target.Character.Head.Position)
+            if onScreen then
+                local screenTarget = Vector2.new(headPos.X, headPos.Y)
+                local center = Camera.ViewportSize / 2
+                local distToCenter = (screenTarget - center).Magnitude
+                
+                if distToCenter <= aimbotFoV then
+                    local delta = screenTarget - Vector2.new(Mouse.X, Mouse.Y)
+                    mousemoverel(delta.X * aimbotSmoothing, delta.Y * aimbotSmoothing)
+                end
+            end
+        end
+    end)
+end
+
+local function StopAimbot()
+    if aimbotLoop then aimbotLoop:Disconnect() end
+    aimbotLoop = nil
+end
+
+local function UpdateFoVCircle()
+    if fovCircle and aimbotFoVEnabled and aimbotEnabled then
+        fovCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
+        fovCircle.Radius = aimbotFoV
+        fovCircle.Visible = true
+    elseif fovCircle then
+        fovCircle.Visible = false
+    end
+end
+
+RunService.RenderStepped:Connect(UpdateFoVCircle)
+
+local AimbotSection = AimbotPage:Section({Name = "Camera Aimbot", Side = 1})
+AimbotSection:Toggle({Name = "Enabled", Flag = "AimbotEnabled", Default = false, Callback = function(v)
+    aimbotEnabled = v
+    if v then
+        StartAimbot()
+    else
+        StopAimbot()
+    end
+    UpdateFoVCircle()
+end})
+AimbotSection:Slider({Name = "Smoothing", Flag = "AimbotSmooth", Min = 0.05, Max = 1, Default = 0.3, Decimals = 2, Callback = function(v) aimbotSmoothing = v end})
+AimbotSection:Slider({Name = "FoV Radius", Flag = "AimbotFoV", Min = 50, Max = 500, Default = 100, Callback = function(v) aimbotFoV = v end})
+AimbotSection:Toggle({Name = "Show FoV Circle", Flag = "AimbotFoVCircle", Default = true, Callback = function(v)
+    aimbotFoVEnabled = v
+    if v and not fovCircle then
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Thickness = 1.5
+        fovCircle.Color = Color3.fromRGB(0, 191, 255)
+        fovCircle.Transparency = 0.6
+        fovCircle.NumSides = 64
+        fovCircle.Filled = false
+    end
+    if fovCircle then fovCircle.Visible = v and aimbotEnabled end
+end})
+AimbotSection:Toggle({Name = "Team Check", Flag = "AimbotTeam", Default = false, Callback = function(v) aimbotTeamCheck = v end})
+
+-- ESP Variables and cleanup
+local activeBoxes = {}
+local activeHealthBars = {}
+local activeTracers = {}
+local activeSkeletons = {}
+local activeArrows = {}
+local active3DBoxes = {}
+local radarActive = false
+local radarObjects = {}
+local teamCheckGlobal = false
+
+local function CleanupBox(plr)
+    if activeBoxes[plr] then
+        if activeBoxes[plr].box then activeBoxes[plr].box:Remove() end
+        if activeBoxes[plr].conn then activeBoxes[plr].conn:Disconnect() end
+        activeBoxes[plr] = nil
+    end
+end
+
+local function CleanupHealthBar(plr)
+    if activeHealthBars[plr] then
+        if activeHealthBars[plr].healthbar then activeHealthBars[plr].healthbar:Remove() end
+        if activeHealthBars[plr].greenhealth then activeHealthBars[plr].greenhealth:Remove() end
+        if activeHealthBars[plr].conn then activeHealthBars[plr].conn:Disconnect() end
+        activeHealthBars[plr] = nil
+    end
+end
+
+local function CleanupTracer(plr)
+    if activeTracers[plr] then
+        if activeTracers[plr].tracer then activeTracers[plr].tracer:Remove() end
+        if activeTracers[plr].conn then activeTracers[plr].conn:Disconnect() end
+        activeTracers[plr] = nil
+    end
+end
+
+local function CleanupSkeleton(plr)
+    if activeSkeletons[plr] then
+        for _, line in pairs(activeSkeletons[plr]) do
+            if line then line:Remove() end
+        end
+        activeSkeletons[plr] = nil
+    end
+end
+
+local function CleanupArrow(plr)
+    if activeArrows[plr] then
+        if activeArrows[plr].arrow then activeArrows[plr].arrow:Remove() end
+        if activeArrows[plr].conn then activeArrows[plr].conn:Disconnect() end
+        activeArrows[plr] = nil
+    end
+end
+
+local function Cleanup3DBox(plr)
+    if active3DBoxes[plr] then
+        for _, line in pairs(active3DBoxes[plr].lines or {}) do
+            if line then line:Remove() end
+        end
+        if active3DBoxes[plr].conn then active3DBoxes[plr].conn:Disconnect() end
+        active3DBoxes[plr] = nil
+    end
+end
+
+local function CleanupRadar()
+    if radarActive then
+        if radarObjects.radarBack then radarObjects.radarBack:Remove() end
+        if radarObjects.radarBorder then radarObjects.radarBorder:Remove() end
+        if radarObjects.localDot then radarObjects.localDot:Remove() end
+        for _, dot in pairs(radarObjects.dots or {}) do
+            if dot then dot:Remove() end
+        end
+        if radarObjects.dragConn1 then radarObjects.dragConn1:Disconnect() end
+        if radarObjects.dragConn2 then radarObjects.dragConn2:Disconnect() end
+        if radarObjects.renderConn then radarObjects.renderConn:Disconnect() end
+        radarActive = false
+        radarObjects = {}
+    end
+end
+
+local function CreateBoxESP(plr)
+    CleanupBox(plr)
+    local Box = Drawing.new("Quad")
+    Box.Visible = false
+    Box.PointA = Vector2.new(0, 0)
+    Box.PointB = Vector2.new(0, 0)
+    Box.PointC = Vector2.new(0, 0)
+    Box.PointD = Vector2.new(0, 0)
+    Box.Color = Color3.fromRGB(0, 191, 255)
+    Box.Thickness = 1
+    Box.Transparency = 1
+    
+    local function Update()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    Box.Visible = false
+                    return
+                end
+                local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+                if vis then 
+                    local points = {}
+                    local c = 0
+                    for _, v in pairs(plr.Character:GetChildren()) do
+                        if v:IsA("BasePart") then
+                            c = c + 1
+                            local p, visP = Camera:WorldToViewportPoint(v.Position)
+                            if v == plr.Character.PrimaryPart then
+                                p, visP = Camera:WorldToViewportPoint((v.CFrame * CFrame.new(0, 0, -v.Size.Z)).p)
+                            elseif v.Name == "Head" then
+                                p, visP = Camera:WorldToViewportPoint((v.CFrame * CFrame.new(0, v.Size.Y/2, v.Size.Z/1.25)).p)
+                            elseif string.match(v.Name, "Left") then
+                                p, visP = Camera:WorldToViewportPoint((v.CFrame * CFrame.new(-v.Size.X/2, 0, 0)).p)
+                            elseif string.match(v.Name, "Right") then
+                                p, visP = Camera:WorldToViewportPoint((v.CFrame * CFrame.new(v.Size.X/2, 0, 0)).p)
+                            end
+                            points[c] = {p, visP}
+                        end
+                    end
+                    
+                    local TopY = math.huge
+                    local DownY = -math.huge
+                    local LeftX = math.huge
+                    local RightX = -math.huge
+                    local Left, Right, Top, Bottom = nil, nil, nil, nil
+                    
+                    for _, v in pairs(points) do
+                        if v[2] == true then
+                            local p = v[1]
+                            if p.Y < TopY then
+                                Top = p
+                                TopY = p.Y
+                            end
+                            if p.Y > DownY then
+                                Bottom = p
+                                DownY = p.Y
+                            end
+                            if p.X > RightX then
+                                Right = p
+                                RightX = p.X
+                            end
+                            if p.X < LeftX then
+                                Left = p
+                                LeftX = p.X
+                            end
+                        end
+                    end
+                    
+                    if Left and Right and Top and Bottom then
+                        Box.PointA = Vector2.new(Right.X, Top.Y)
+                        Box.PointB = Vector2.new(Left.X, Top.Y)
+                        Box.PointC = Vector2.new(Left.X, Bottom.Y)
+                        Box.PointD = Vector2.new(Right.X, Bottom.Y)
+                        Box.Visible = true
+                    else 
+                        Box.Visible = false
+                    end
+                else 
+                    Box.Visible = false
+                end
+            else
+                Box.Visible = false
+                if not Players:FindFirstChild(plr.Name) then
+                    Box:Remove()
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, Box
+    end
+    local conn, boxObj = coroutine.wrap(Update)()
+    activeBoxes[plr] = {conn = conn, box = boxObj}
+end
+
+local function CreateHealthBarESP(plr)
+    CleanupHealthBar(plr)
+    local function NewLine(thickness, color)
+        local line = Drawing.new("Line")
+        line.Visible = false
+        line.From = Vector2.new(0, 0)
+        line.To = Vector2.new(0, 0)
+        line.Color = color
+        line.Thickness = thickness
+        line.Transparency = 1
+        return line
+    end
+    
+    local black = Color3.fromRGB(0, 0, 0)
+    local green = Color3.fromRGB(0, 255, 0)
+    local red = Color3.fromRGB(255, 0, 0)
+    local healthbar = NewLine(3, black)
+    local greenhealth = NewLine(1.5, black)
+    
+    local function Updater()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 and plr.Character:FindFirstChild("Head") then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    healthbar.Visible = false
+                    greenhealth.Visible = false
+                    return
+                end
+                local HumPos, OnScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if OnScreen then
+                    local head = Camera:WorldToViewportPoint(plr.Character.Head.Position)
+                    local DistanceY = math.clamp((Vector2.new(head.X, head.Y) - Vector2.new(HumPos.X, HumPos.Y)).magnitude, 2, math.huge)
+                    
+                    local d = (Vector2.new(HumPos.X - DistanceY, HumPos.Y - DistanceY*2) - Vector2.new(HumPos.X - DistanceY, HumPos.Y + DistanceY*2)).magnitude
+                    local healthoffset = plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth * d
+                    
+                    healthbar.From = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2)
+                    healthbar.To = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y - DistanceY*2)
+                    
+                    greenhealth.From = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2)
+                    greenhealth.To = Vector2.new(HumPos.X - DistanceY - 4, HumPos.Y + DistanceY*2 - healthoffset)
+                    greenhealth.Color = red:lerp(green, plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth)
+                    
+                    healthbar.Visible = true
+                    greenhealth.Visible = true
+                else
+                    healthbar.Visible = false
+                    greenhealth.Visible = false
+                end
+            else
+                healthbar.Visible = false
+                greenhealth.Visible = false
+                if not Players:FindFirstChild(plr.Name) then
+                    healthbar:Remove()
+                    greenhealth:Remove()
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, healthbar, greenhealth
+    end
+    local conn, hb, gh = coroutine.wrap(Updater)()
+    activeHealthBars[plr] = {conn = conn, healthbar = hb, greenhealth = gh}
+end
+
+local function CreateTracerESP(plr)
+    CleanupTracer(plr)
+    local Tracer = Drawing.new("Line")
+    Tracer.Visible = false
+    Tracer.Color = Color3.fromRGB(0, 191, 255)
+    Tracer.Thickness = 1
+    Tracer.Transparency = 1
+    
+    local function Update()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("HumanoidRootPart") and plr ~= LocalPlayer and plr.Character.Humanoid.Health > 0 then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    Tracer.Visible = false
+                    return
+                end
+                local Vector, OnScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if OnScreen then
+                    Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    Tracer.To = Vector2.new(Vector.X, Vector.Y)
+                    Tracer.Visible = true
+                else
+                    Tracer.Visible = false
+                end
+            else
+                Tracer.Visible = false
+                if not Players:FindFirstChild(plr.Name) then
+                    Tracer:Remove()
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, Tracer
+    end
+    local conn, tracerObj = coroutine.wrap(Update)()
+    activeTracers[plr] = {conn = conn, tracer = tracerObj}
+end
+
+local function CreateSkeletonESP(plr)
+    CleanupSkeleton(plr)
+    local limbs = {}
+    local function DrawLine()
+        local l = Drawing.new("Line")
+        l.Visible = false
+        l.Thickness = 1
+        l.Color = Color3.fromRGB(0, 191, 255)
+        l.Transparency = 1
+        return l
+    end
+    
+    local function UpdateSkeleton()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    for _, v in pairs(limbs) do if v then v.Visible = false end end
+                    return
+                end
+                local _, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if vis then
+                    local isR15 = (plr.Character.Humanoid.RigType == Enum.HumanoidRigType.R15)
+                    if isR15 then
+                        local Head = Camera:WorldToViewportPoint(plr.Character.Head.Position)
+                        local UpperTorso = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
+                        local LowerTorso = Camera:WorldToViewportPoint(plr.Character.LowerTorso.Position)
+                        local LeftUpperArm = Camera:WorldToViewportPoint(plr.Character.LeftUpperArm.Position)
+                        local LeftLowerArm = Camera:WorldToViewportPoint(plr.Character.LeftLowerArm.Position)
+                        local LeftHand = Camera:WorldToViewportPoint(plr.Character.LeftHand.Position)
+                        local RightUpperArm = Camera:WorldToViewportPoint(plr.Character.RightUpperArm.Position)
+                        local RightLowerArm = Camera:WorldToViewportPoint(plr.Character.RightLowerArm.Position)
+                        local RightHand = Camera:WorldToViewportPoint(plr.Character.RightHand.Position)
+                        local LeftUpperLeg = Camera:WorldToViewportPoint(plr.Character.LeftUpperLeg.Position)
+                        local LeftLowerLeg = Camera:WorldToViewportPoint(plr.Character.LeftLowerLeg.Position)
+                        local LeftFoot = Camera:WorldToViewportPoint(plr.Character.LeftFoot.Position)
+                        local RightUpperLeg = Camera:WorldToViewportPoint(plr.Character.RightUpperLeg.Position)
+                        local RightLowerLeg = Camera:WorldToViewportPoint(plr.Character.RightLowerLeg.Position)
+                        local RightFoot = Camera:WorldToViewportPoint(plr.Character.RightFoot.Position)
+                        
+                        if not limbs.Head_UpperTorso then
+                            limbs.Head_UpperTorso = DrawLine()
+                            limbs.UpperTorso_LowerTorso = DrawLine()
+                            limbs.UpperTorso_LeftUpperArm = DrawLine()
+                            limbs.LeftUpperArm_LeftLowerArm = DrawLine()
+                            limbs.LeftLowerArm_LeftHand = DrawLine()
+                            limbs.UpperTorso_RightUpperArm = DrawLine()
+                            limbs.RightUpperArm_RightLowerArm = DrawLine()
+                            limbs.RightLowerArm_RightHand = DrawLine()
+                            limbs.LowerTorso_LeftUpperLeg = DrawLine()
+                            limbs.LeftUpperLeg_LeftLowerLeg = DrawLine()
+                            limbs.LeftLowerLeg_LeftFoot = DrawLine()
+                            limbs.LowerTorso_RightUpperLeg = DrawLine()
+                            limbs.RightUpperLeg_RightLowerLeg = DrawLine()
+                            limbs.RightLowerLeg_RightFoot = DrawLine()
+                        end
+                        
+                        limbs.Head_UpperTorso.From = Vector2.new(Head.X, Head.Y)
+                        limbs.Head_UpperTorso.To = Vector2.new(UpperTorso.X, UpperTorso.Y)
+                        limbs.UpperTorso_LowerTorso.From = Vector2.new(UpperTorso.X, UpperTorso.Y)
+                        limbs.UpperTorso_LowerTorso.To = Vector2.new(LowerTorso.X, LowerTorso.Y)
+                        limbs.UpperTorso_LeftUpperArm.From = Vector2.new(UpperTorso.X, UpperTorso.Y)
+                        limbs.UpperTorso_LeftUpperArm.To = Vector2.new(LeftUpperArm.X, LeftUpperArm.Y)
+                        limbs.LeftUpperArm_LeftLowerArm.From = Vector2.new(LeftUpperArm.X, LeftUpperArm.Y)
+                        limbs.LeftUpperArm_LeftLowerArm.To = Vector2.new(LeftLowerArm.X, LeftLowerArm.Y)
+                        limbs.LeftLowerArm_LeftHand.From = Vector2.new(LeftLowerArm.X, LeftLowerArm.Y)
+                        limbs.LeftLowerArm_LeftHand.To = Vector2.new(LeftHand.X, LeftHand.Y)
+                        limbs.UpperTorso_RightUpperArm.From = Vector2.new(UpperTorso.X, UpperTorso.Y)
+                        limbs.UpperTorso_RightUpperArm.To = Vector2.new(RightUpperArm.X, RightUpperArm.Y)
+                        limbs.RightUpperArm_RightLowerArm.From = Vector2.new(RightUpperArm.X, RightUpperArm.Y)
+                        limbs.RightUpperArm_RightLowerArm.To = Vector2.new(RightLowerArm.X, RightLowerArm.Y)
+                        limbs.RightLowerArm_RightHand.From = Vector2.new(RightLowerArm.X, RightLowerArm.Y)
+                        limbs.RightLowerArm_RightHand.To = Vector2.new(RightHand.X, RightHand.Y)
+                        limbs.LowerTorso_LeftUpperLeg.From = Vector2.new(LowerTorso.X, LowerTorso.Y)
+                        limbs.LowerTorso_LeftUpperLeg.To = Vector2.new(LeftUpperLeg.X, LeftUpperLeg.Y)
+                        limbs.LeftUpperLeg_LeftLowerLeg.From = Vector2.new(LeftUpperLeg.X, LeftUpperLeg.Y)
+                        limbs.LeftUpperLeg_LeftLowerLeg.To = Vector2.new(LeftLowerLeg.X, LeftLowerLeg.Y)
+                        limbs.LeftLowerLeg_LeftFoot.From = Vector2.new(LeftLowerLeg.X, LeftLowerLeg.Y)
+                        limbs.LeftLowerLeg_LeftFoot.To = Vector2.new(LeftFoot.X, LeftFoot.Y)
+                        limbs.LowerTorso_RightUpperLeg.From = Vector2.new(LowerTorso.X, LowerTorso.Y)
+                        limbs.LowerTorso_RightUpperLeg.To = Vector2.new(RightUpperLeg.X, RightUpperLeg.Y)
+                        limbs.RightUpperLeg_RightLowerLeg.From = Vector2.new(RightUpperLeg.X, RightUpperLeg.Y)
+                        limbs.RightUpperLeg_RightLowerLeg.To = Vector2.new(RightLowerLeg.X, RightLowerLeg.Y)
+                        limbs.RightLowerLeg_RightFoot.From = Vector2.new(RightLowerLeg.X, RightLowerLeg.Y)
+                        limbs.RightLowerLeg_RightFoot.To = Vector2.new(RightFoot.X, RightFoot.Y)
+                        for _, v in pairs(limbs) do v.Visible = true end
+                    else
+                        local Head = Camera:WorldToViewportPoint(plr.Character.Head.Position)
+                        local Torso = Camera:WorldToViewportPoint(plr.Character.Torso.Position)
+                        local LeftArm = Camera:WorldToViewportPoint(plr.Character["Left Arm"].Position)
+                        local RightArm = Camera:WorldToViewportPoint(plr.Character["Right Arm"].Position)
+                        local LeftLeg = Camera:WorldToViewportPoint(plr.Character["Left Leg"].Position)
+                        local RightLeg = Camera:WorldToViewportPoint(plr.Character["Right Leg"].Position)
+                        
+                        if not limbs.Head_Torso then
+                            limbs.Head_Torso = DrawLine()
+                            limbs.Torso_LeftArm = DrawLine()
+                            limbs.Torso_RightArm = DrawLine()
+                            limbs.Torso_LeftLeg = DrawLine()
+                            limbs.Torso_RightLeg = DrawLine()
+                        end
+                        
+                        limbs.Head_Torso.From = Vector2.new(Head.X, Head.Y)
+                        limbs.Head_Torso.To = Vector2.new(Torso.X, Torso.Y)
+                        limbs.Torso_LeftArm.From = Vector2.new(Torso.X, Torso.Y)
+                        limbs.Torso_LeftArm.To = Vector2.new(LeftArm.X, LeftArm.Y)
+                        limbs.Torso_RightArm.From = Vector2.new(Torso.X, Torso.Y)
+                        limbs.Torso_RightArm.To = Vector2.new(RightArm.X, RightArm.Y)
+                        limbs.Torso_LeftLeg.From = Vector2.new(Torso.X, Torso.Y)
+                        limbs.Torso_LeftLeg.To = Vector2.new(LeftLeg.X, LeftLeg.Y)
+                        limbs.Torso_RightLeg.From = Vector2.new(Torso.X, Torso.Y)
+                        limbs.Torso_RightLeg.To = Vector2.new(RightLeg.X, RightLeg.Y)
+                        for _, v in pairs(limbs) do v.Visible = true end
+                    end
+                else
+                    for _, v in pairs(limbs) do if v then v.Visible = false end end
+                end
+            else
+                for _, v in pairs(limbs) do if v then v.Visible = false end end
+                if not Players:FindFirstChild(plr.Name) then
+                    for _, v in pairs(limbs) do v:Remove() end
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, limbs
+    end
+    local conn, limbTable = coroutine.wrap(UpdateSkeleton)()
+    activeSkeletons[plr] = limbTable
+end
+
+local function CreateArrowESP(plr)
+    CleanupArrow(plr)
+    local DistFromCenter = 80
+    local TriangleHeight = 16
+    local TriangleWidth = 16
+    local arrow = Drawing.new("Triangle")
+    arrow.Visible = false
+    arrow.Color = Color3.fromRGB(0, 191, 255)
+    arrow.Filled = true
+    arrow.Thickness = 1
+    arrow.Transparency = 0
+    
+    local function UpdateArrow()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    arrow.Visible = false
+                    return
+                end
+                local _, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if not onScreen then
+                    local relative = (plr.Character.HumanoidRootPart.Position - Camera.CFrame.Position) * CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + Camera.CFrame.LookVector):Inverse()
+                    local direction = Vector2.new(relative.X, relative.Z).Unit
+                    local base = direction * DistFromCenter
+                    local side = Vector2.new(-direction.Y, direction.X) * (TriangleWidth / 2)
+                    local tip = direction * (DistFromCenter + TriangleHeight)
+                    local center = Camera.ViewportSize / 2
+                    arrow.PointA = center - (base + side)
+                    arrow.PointB = center - (base - side)
+                    arrow.PointC = center - tip
+                    arrow.Visible = true
+                else
+                    arrow.Visible = false
+                end
+            else
+                arrow.Visible = false
+                if not Players:FindFirstChild(plr.Name) then
+                    arrow:Remove()
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, arrow
+    end
+    local conn, arrowObj = coroutine.wrap(UpdateArrow)()
+    activeArrows[plr] = {conn = conn, arrow = arrowObj}
+end
+
+local function Create3DBoxESP(plr)
+    Cleanup3DBox(plr)
+    local lines = {}
+    for i = 1, 12 do
+        local l = Drawing.new("Line")
+        l.Visible = false
+        l.Thickness = 1
+        l.Color = Color3.fromRGB(0, 191, 255)
+        l.Transparency = 1
+        lines[i] = l
+    end
+    
+    local function Update3D()
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
+                if teamCheckGlobal and plr.Team == LocalPlayer.Team then
+                    for i = 1, 12 do lines[i].Visible = false end
+                    return
+                end
+                local _, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local size = Vector3.new(2, 3, 1.5) * (plr.Character.Head.Size.Y)
+                    local cf = plr.Character.HumanoidRootPart.CFrame
+                    local corners = {
+                        cf * CFrame.new(-size.X, size.Y, -size.Z), cf * CFrame.new(-size.X, size.Y, size.Z),
+                        cf * CFrame.new(size.X, size.Y, size.Z), cf * CFrame.new(size.X, size.Y, -size.Z),
+                        cf * CFrame.new(-size.X, -size.Y, -size.Z), cf * CFrame.new(-size.X, -size.Y, size.Z),
+                        cf * CFrame.new(size.X, -size.Y, size.Z), cf * CFrame.new(size.X, -size.Y, -size.Z)
+                    }
+                    local screenCorners = {}
+                    for i, corner in ipairs(corners) do
+                        local v = Camera:WorldToViewportPoint(corner.p)
+                        screenCorners[i] = Vector2.new(v.X, v.Y)
+                    end
+                    local edges = {{1,2},{2,3},{3,4},{4,1},{5,6},{6,7},{7,8},{8,5},{1,5},{2,6},{3,7},{4,8}}
+                    for i, edge in ipairs(edges) do
+                        lines[i].From = screenCorners[edge[1]]
+                        lines[i].To = screenCorners[edge[2]]
+                        lines[i].Visible = true
+                    end
+                else
+                    for i = 1, 12 do lines[i].Visible = false end
+                end
+            else
+                for i = 1, 12 do lines[i].Visible = false end
+                if not Players:FindFirstChild(plr.Name) then
+                    for i = 1, 12 do lines[i]:Remove() end
+                    conn:Disconnect()
+                end
+            end
+        end)
+        return conn, lines
+    end
+    local conn, lineTable = coroutine.wrap(Update3D)()
+    active3DBoxes[plr] = {conn = conn, lines = lines}
+end
+
+local function CreateRadar()
+    CleanupRadar()
+    local radarPos = Vector2.new(200, 200)
+    local radarRadius = 100
+    local radarBack = Drawing.new("Circle")
+    radarBack.Visible = true
+    radarBack.Radius = radarRadius
+    radarBack.Color = Color3.fromRGB(10, 10, 10)
+    radarBack.Transparency = 0.9
+    radarBack.Filled = true
+    radarBack.Thickness = 1
+    radarBack.Position = radarPos
+    local radarBorder = Drawing.new("Circle")
+    radarBorder.Visible = true
+    radarBorder.Radius = radarRadius
+    radarBorder.Color = Color3.fromRGB(75, 75, 75)
+    radarBorder.Transparency = 0.75
+    radarBorder.Filled = false
+    radarBorder.Thickness = 3
+    radarBorder.Position = radarPos
+    
+    local function GetRelative(pos)
+        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+            local charPos = LocalPlayer.Character.PrimaryPart.Position
+            local camPos = Vector3.new(Camera.CFrame.Position.X, charPos.Y, Camera.CFrame.Position.Z)
+            local relative = CFrame.new(charPos, camPos):PointToObjectSpace(pos)
+            return relative.X, relative.Z
+        end
+        return 0, 0
+    end
+    
+    local dots = {}
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer then
+            local dot = Drawing.new("Circle")
+            dot.Radius = 3
+            dot.Filled = true
+            dot.Color = Color3.fromRGB(0, 191, 255)
+            dot.Transparency = 1
+            dot.Visible = false
+            dots[v] = dot
+            local function UpdateRadarDot()
+                local conn
+                conn = RunService.RenderStepped:Connect(function()
+                    if teamCheckGlobal and v.Team == LocalPlayer.Team then
+                        dot.Visible = false
+                        return
+                    end
+                    if v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+                        local relX, relZ = GetRelative(v.Character.HumanoidRootPart.Position)
+                        local newPos = radarPos - Vector2.new(relX, relZ)
+                        if (newPos - radarPos).magnitude < radarRadius - 2 then
+                            dot.Position = newPos
+                            dot.Radius = 3
+                            dot.Visible = true
+                        else
+                            local dir = (newPos - radarPos).Unit
+                            local clipped = radarPos + dir * (radarRadius - 2)
+                            dot.Position = clipped
+                            dot.Radius = 2
+                            dot.Visible = true
+                        end
+                    else
+                        dot.Visible = false
+                    end
+                end)
+                return conn
+            end
+            coroutine.wrap(UpdateRadarDot)()
+        end
+    end
+    
+    local localDot = Drawing.new("Triangle")
+    localDot.Visible = true
+    localDot.Color = Color3.fromRGB(255, 255, 255)
+    localDot.Filled = true
+    localDot.PointA = radarPos + Vector2.new(0, -6)
+    localDot.PointB = radarPos + Vector2.new(-3, 6)
+    localDot.PointC = radarPos + Vector2.new(3, 6)
+    
+    local dragging, dragOffset = false, Vector2.new(0, 0)
+    local dragConn1, dragConn2, renderConn
+    
+    dragConn1 = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and (Vector2.new(Mouse.X, Mouse.Y + 36) - radarPos).magnitude < radarRadius then
+            dragOffset = radarPos - Vector2.new(Mouse.X, Mouse.Y + 36)
+            dragging = true
+        end
+    end)
+    dragConn2 = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    renderConn = RunService.RenderStepped:Connect(function()
+        if dragging then radarPos = Vector2.new(Mouse.X, Mouse.Y + 36) + dragOffset end
+        radarBack.Position = radarPos
+        radarBorder.Position = radarPos
+        localDot.PointA = radarPos + Vector2.new(0, -6)
+        localDot.PointB = radarPos + Vector2.new(-3, 6)
+        localDot.PointC = radarPos + Vector2.new(3, 6)
+    end)
+    
+    radarActive = true
+    radarObjects = {
+        radarBack = radarBack,
+        radarBorder = radarBorder,
+        localDot = localDot,
+        dots = dots,
+        dragConn1 = dragConn1,
+        dragConn2 = dragConn2,
+        renderConn = renderConn
+    }
+end
+
+-- ESP Toggle variables
+local boxToggle = false
+local healthToggle = false
+local tracerToggle = false
+local skeletonToggle = false
+local arrowToggle = false
+local box3DToggle = false
+local radarToggle = false
+
+local VisualsSection = VisualsPage:Section({Name = "Player ESP", Side = 1})
+VisualsSection:Toggle({Name = "Team Check", Flag = "TeamCheck", Default = false, Callback = function(v)
+    teamCheckGlobal = v
+end})
+VisualsSection:Toggle({Name = "2D Box ESP", Flag = "BoxESP", Default = false, Callback = function(v)
+    boxToggle = v
+    if v then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then CreateBoxESP(p) end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do CleanupBox(p) end
+    end
+end})
+VisualsSection:Toggle({Name = "Health Bars", Flag = "HealthBars", Default = false, Callback = function(v)
+    healthToggle = v
+    if v then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then CreateHealthBarESP(p) end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do CleanupHealthBar(p) end
+    end
+end})
+VisualsSection:Toggle({Name = "Tracers", Flag = "Tracers", Default = false, Callback = function(v)
+    tracerToggle = v
+    if v then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then CreateTracerESP(p) end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do CleanupTracer(p) end
+    end
+end})
+VisualsSection:Toggle({Name = "Skeleton ESP", Flag = "SkeletonESP", Default = false, Callback = function(v)
+    skeletonToggle = v
+    if v then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then CreateSkeletonESP(p) end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do CleanupSkeleton(p) end
+    end
+end})
+VisualsSection:Toggle({Name = "3D Box ESP", Flag = "3DBoxESP", Default = false, Callback = function(v)
+    box3DToggle = v
+    if v then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then Create3DBoxESP(p) end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do Cleanup3DBox(p) end
+    end
+end})
+VisualsSection:Toggle({Name = "Radar", Flag = "Radar", Default = false, Callback = function(v)
+    radarToggle = v
+    if v then
+        CreateRadar()
+    else
+        CleanupRadar()
+    end
+end})
+
+-- Movement variables
+local walkspeedEnabled = false
+local walkspeedValue = 16
+local jumpPowerEnabled = false
+local jumpPowerValue = 50
+local noclipEnabled = false
+local noclipConn = nil
+local flyEnabled = false
+local flySpeed = 50
+local flying = false
+local flyBodyVelocity = nil
+local flyBodyGyro = nil
+local flyConn = nil
+local vehicleFlyEnabled = false
+local vehicleFlySpeed = 80
+local vehicleFlying = false
+local vehicleFlyBodyVelocity = nil
+local vehicleFlyBodyGyro = nil
+local vehicleFlyConn = nil
+local currentVehicleSeat = nil
+local infJumpEnabled = false
+local infJumpConn = nil
+local antiFlingEnabled = false
+local antiFlingMaxVel = 100
+local antiFlingConn = nil
+
+local MiscSection = MiscPage:Section({Name = "Movement", Side = 1})
+
+MiscSection:Toggle({Name = "Walkspeed", Flag = "WalkspeedToggle", Default = false, Callback = function(v)
+    walkspeedEnabled = v
+    if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = walkspeedValue
+    elseif not v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = 16
+    end
+end})
+MiscSection:Slider({Name = "Walkspeed Value", Flag = "WalkspeedVal", Min = 16, Max = 250, Default = 16, Callback = function(v)
+    walkspeedValue = v
+    if walkspeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = v
+    end
+end})
+
+MiscSection:Toggle({Name = "Jump Power", Flag = "JumpPowerToggle", Default = false, Callback = function(v)
+    jumpPowerEnabled = v
+    if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = jumpPowerValue
+    elseif not v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = 50
+    end
+end})
+MiscSection:Slider({Name = "Jump Power Value", Flag = "JumpPowerVal", Min = 50, Max = 350, Default = 50, Callback = function(v)
+    jumpPowerValue = v
+    if jumpPowerEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = v
+    end
+end})
+
+MiscSection:Toggle({Name = "Noclip", Flag = "Noclip", Default = false, Callback = function(v)
+    noclipEnabled = v
+    if noclipConn then noclipConn:Disconnect() end
+    if v then
+        noclipConn = RunService.Stepped:Connect(function()
+            if not noclipEnabled then return end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+        noclipConn = nil
+    end
+end})
+
+MiscSection:Toggle({Name = "Anti-Fling", Flag = "AntiFling", Default = false, Callback = function(v)
+    antiFlingEnabled = v
+    if antiFlingConn then antiFlingConn:Disconnect() end
+    if v then
+        antiFlingConn = RunService.Heartbeat:Connect(function()
+            if not antiFlingEnabled then return end
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                local vel = hrp.AssemblyLinearVelocity
+                if vel.Magnitude > antiFlingMaxVel then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+        end)
+    end
+end})
+
+MiscSection:Toggle({Name = "Infinite Jump", Flag = "InfJump", Default = false, Callback = function(v)
+    infJumpEnabled = v
+    if infJumpConn then infJumpConn:Disconnect() end
+    if v then
+        infJumpConn = UserInputService.JumpRequest:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    end
+end})
+
+MiscSection:Toggle({Name = "Fly", Flag = "FlyToggle", Default = false, Callback = function(v)
+    flyEnabled = v
+    if flyConn then flyConn:Disconnect() end
+    if v then
+        local function startFly()
+            local char = LocalPlayer.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if not hrp or not humanoid then return end
+            
+            flying = true
+            humanoid.PlatformStand = true
+            
+            flyBodyVelocity = Instance.new("BodyVelocity")
+            flyBodyVelocity.Velocity = Vector3.zero
+            flyBodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            flyBodyVelocity.Parent = hrp
+            
+            flyBodyGyro = Instance.new("BodyGyro")
+            flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+            flyBodyGyro.P = 1e4
+            flyBodyGyro.CFrame = hrp.CFrame
+            flyBodyGyro.Parent = hrp
+        end
+        
+        local function stopFly()
+            flying = false
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then humanoid.PlatformStand = false end
+            end
+            if flyBodyVelocity then flyBodyVelocity:Destroy() end
+            if flyBodyGyro then flyBodyGyro:Destroy() end
+            flyBodyVelocity = nil
+            flyBodyGyro = nil
+        end
+        
+        local function updateFly()
+            if not flying then return end
+            local char = LocalPlayer.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            
+            local moveVector = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector = moveVector + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector = moveVector + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVector = moveVector - Vector3.new(0, 1, 0) end
+            
+            if moveVector.Magnitude > 0 then
+                moveVector = moveVector.Unit * flySpeed
+            end
+            
+            if flyBodyVelocity then flyBodyVelocity.Velocity = moveVector end
+            if flyBodyGyro then flyBodyGyro.CFrame = Camera.CFrame end
+        end
+        
+        startFly()
+        flyConn = RunService.Heartbeat:Connect(updateFly)
+        
+        LocalPlayer.CharacterAdded:Connect(function(newChar)
+            if flyEnabled then
+                task.wait(0.5)
+                startFly()
+            end
+        end)
+    else
+        if flyConn then flyConn:Disconnect() end
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid.PlatformStand = false end
+        end
+        if flyBodyVelocity then flyBodyVelocity:Destroy() end
+        if flyBodyGyro then flyBodyGyro:Destroy() end
+        flyBodyVelocity = nil
+        flyBodyGyro = nil
+        flyConn = nil
+        flying = false
+    end
+end})
+MiscSection:Slider({Name = "Fly Speed", Flag = "FlySpeed", Min = 10, Max = 250, Default = 50, Callback = function(v) flySpeed = v end})
+
+MiscSection:Toggle({Name = "Vehicle Fly", Flag = "VehicleFly", Default = false, Callback = function(v)
+    vehicleFlyEnabled = v
+    if vehicleFlyConn then vehicleFlyConn:Disconnect() end
+    if v then
+		Library:Notification("dopamine.wtf", "vehicle fly either wont work or is REALLY weird and most likely detected in most games", 10)
+        local function getVehicleSeat()
+            local char = LocalPlayer.Character
+            if not char then return nil end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
+                return humanoid.SeatPart
+            end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("VehicleSeat") then return part end
+            end
+            return nil
+        end
+        
+        local function startVehicleFly(seat)
+            if not seat then return end
+            vehicleFlying = true
+            currentVehicleSeat = seat
+            seat.Throttle = 0
+            seat.Steer = 0
+            
+            local rootPart = seat.Parent:FindFirstChild("VehicleRootPart") or seat
+            vehicleFlyBodyVelocity = Instance.new("BodyVelocity")
+            vehicleFlyBodyVelocity.Velocity = Vector3.zero
+            vehicleFlyBodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+            vehicleFlyBodyVelocity.Parent = rootPart
+            
+            vehicleFlyBodyGyro = Instance.new("BodyGyro")
+            vehicleFlyBodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+            vehicleFlyBodyGyro.P = 1e5
+            vehicleFlyBodyGyro.CFrame = rootPart.CFrame
+            vehicleFlyBodyGyro.Parent = rootPart
+        end
+        
+        local function stopVehicleFly()
+            vehicleFlying = false
+            if vehicleFlyBodyVelocity then vehicleFlyBodyVelocity:Destroy() end
+            if vehicleFlyBodyGyro then vehicleFlyBodyGyro:Destroy() end
+            vehicleFlyBodyVelocity = nil
+            vehicleFlyBodyGyro = nil
+            if currentVehicleSeat then
+                currentVehicleSeat.Throttle = 0
+                currentVehicleSeat.Steer = 0
+            end
+            currentVehicleSeat = nil
+        end
+        
+        local function updateVehicleFly()
+            if not vehicleFlying or not currentVehicleSeat then return end
+            local rootPart = currentVehicleSeat.Parent:FindFirstChild("VehicleRootPart") or currentVehicleSeat
+            local moveVector = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector = moveVector + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector = moveVector + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVector = moveVector - Vector3.new(0, 1, 0) end
+            
+            if moveVector.Magnitude > 0 then
+                moveVector = moveVector.Unit * vehicleFlySpeed
+            end
+            
+            if vehicleFlyBodyVelocity then vehicleFlyBodyVelocity.Velocity = moveVector end
+            if vehicleFlyBodyGyro then vehicleFlyBodyGyro.CFrame = Camera.CFrame end
+        end
+        
+        local seatCheckConn
+        seatCheckConn = RunService.Heartbeat:Connect(function()
+            if not vehicleFlyEnabled then
+                if seatCheckConn then seatCheckConn:Disconnect() end
+                return
+            end
+            local seat = getVehicleSeat()
+            if seat and not vehicleFlying then
+                startVehicleFly(seat)
+            elseif not seat and vehicleFlying then
+                stopVehicleFly()
+            end
+        end)
+        
+        vehicleFlyConn = RunService.Heartbeat:Connect(updateVehicleFly)
+    else
+        if vehicleFlyConn then vehicleFlyConn:Disconnect() end
+        stopVehicleFly()
+        vehicleFlyConn = nil
+    end
+end})
+MiscSection:Slider({Name = "Vehicle Fly Speed", Flag = "VehicleFlySpeed", Min = 10, Max = 300, Default = 80, Callback = function(v) vehicleFlySpeed = v end})
+
+Library:Notification("dopamine.wtf", "loaded propperly", 5)
+
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        if boxToggle then CreateBoxESP(p) end
+        if healthToggle then CreateHealthBarESP(p) end
+        if tracerToggle then CreateTracerESP(p) end
+        if skeletonToggle then CreateSkeletonESP(p) end
+        if arrowToggle then CreateArrowESP(p) end
+        if box3DToggle then Create3DBoxESP(p) end
+    end
+end)
