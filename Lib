@@ -5119,18 +5119,10 @@ local Library do
             end
 
             function NewKey:SetStatus(Bool)
-                if Bool then
-                    Row.Instance.Visible = true
-                    NewKey.Instance.Visible = true
-                    NewKey:Tween(nil, {TextTransparency = 0})
-                    Accent:Tween(nil, {BackgroundTransparency = 0})
-                else
-                    NewKey:Tween(nil, {TextTransparency = 1}).Tween.Completed:Connect(function()
-                        NewKey.Instance.Visible = false
-                        Row.Instance.Visible = false
-                    end)
-                    Accent:Tween(nil, {BackgroundTransparency = 1})
-                end
+                Row.Instance.Visible = true
+                NewKey.Instance.Visible = true
+                NewKey:Tween(nil, {TextTransparency = Bool and 0 or 0.25})
+                Accent:Tween(nil, {BackgroundTransparency = Bool and 0 or 0.65})
             end
 
             function NewKey:SetVisible(Bool)
@@ -5159,7 +5151,8 @@ local Library do
                 Position = UDim2New(0, 12, 0, 58),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
-                AutomaticSize = Enum.AutomaticSize.XY,
+                Size = UDim2New(0, 190, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = FromRGB(14, 17, 15)
             })  Items["TargetInfo"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
 
@@ -5230,9 +5223,9 @@ local Library do
                 BorderColor3 = FromRGB(0, 0, 0),
                 BackgroundTransparency = 1,
                 Position = UDim2New(0, 0, 0, 22),
-                Size = UDim2New(0, 0, 0, 0),
+                Size = UDim2New(1, 0, 0, 0),
                 BorderSizePixel = 0,
-                AutomaticSize = Enum.AutomaticSize.XY,
+                AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })
 
