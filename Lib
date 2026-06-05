@@ -4973,10 +4973,10 @@ local Library do
             Items["KeybindList"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                AnchorPoint = Vector2New(0, 0.5),
-                Position = UDim2New(0, 12, 0.5, 55),
+                AnchorPoint = Vector2New(0, 1),
+                Position = UDim2New(0, 12, 1, -12),
                 BorderColor3 = FromRGB(12, 12, 12),
-                Size = UDim2New(0, 116, 0, 32),
+                Size = UDim2New(0, 180, 0, 30),
                 BorderSizePixel = 2,
                 BackgroundColor3 = FromRGB(14, 17, 15)
             })  Items["KeybindList"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
@@ -5008,6 +5008,7 @@ local Library do
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
             Items["Title"]:TextBorder()
+            Items["Title"].Instance.ZIndex = 2
 
             Instances:Create("UIPadding", {
                 Parent = Items["KeybindList"].Instance,
@@ -5028,12 +5029,26 @@ local Library do
                 BackgroundColor3 = FromRGB(202, 243, 255)
             })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
+            Items["OuterGlow"] = Instances:Create("ImageLabel", {
+                Parent = Items["KeybindList"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://1316045117",
+                ImageColor3 = FromRGB(202, 243, 255),
+                ImageTransparency = 0.88,
+                ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = Rect.new(10, 10, 118, 118),
+                Position = UDim2New(0, -12, 0, -12),
+                Size = UDim2New(1, 24, 1, 24),
+                ZIndex = 0
+            })  Items["OuterGlow"]:AddToTheme({ImageColor3 = "Accent"})
+
             Items["Content"] = Instances:Create("Frame", {
                 Parent = Items["KeybindList"].Instance,
                 Name = "\0",
                 BorderColor3 = FromRGB(0, 0, 0),
                 BackgroundTransparency = 1,
-                Position = UDim2New(0, 0, 0, 32),
+                Position = UDim2New(0, 0, 0, 18),
                 Size = UDim2New(1, 0, 0, 0),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -5043,43 +5058,84 @@ local Library do
             Instances:Create("UIListLayout", {
                 Parent = Items["Content"].Instance,
                 Name = "\0",
+                Padding = UDimNew(0, 4),
                 SortOrder = Enum.SortOrder.LayoutOrder
             })
         end
 
         function KeybindList:Add(Key, Name, Mode)
-            local NewKey = Instances:Create("TextLabel", {
+            local Row = Instances:Create("Frame", {
                 Parent = Items["Content"].Instance,
+                Name = "\0",
+                BorderColor3 = FromRGB(0, 0, 0),
+                BackgroundColor3 = FromRGB(20, 24, 21),
+                BorderSizePixel = 1,
+                Size = UDim2New(1, 0, 0, 20),
+                AutomaticSize = Enum.AutomaticSize.Y
+            })  Row:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+            Row:Border("Border")
+
+            local Accent = Instances:Create("Frame", {
+                Parent = Row.Instance,
+                Name = "\0",
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(0, 1, 1, 0),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(202, 243, 255)
+            })  Accent:AddToTheme({BackgroundColor3 = "Accent"})
+
+            local NewKey = Instances:Create("TextLabel", {
+                Parent = Row.Instance,
                 Name = "\0",
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(235, 235, 235),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "" ..Key .." - " ..Name .. " ("..Mode..")",
+                Text = "",
                 BackgroundTransparency = 1,
-                Size = UDim2New(0, 0, 0, 15),
+                Position = UDim2New(0, 6, 0, 1),
+                Size = UDim2New(1, -12, 1, -2),
                 BorderSizePixel = 0,
-                AutomaticSize = Enum.AutomaticSize.X,
+                AutomaticSize = Enum.AutomaticSize.None,
                 TextTransparency = 1,
                 Visible = false,
+                TextXAlignment = Enum.TextXAlignment.Left,
                 TextSize = 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  NewKey:AddToTheme({TextColor3 = "Text"})
-
             NewKey:TextBorder()
+            NewKey.Instance.ZIndex = 2
 
-            function NewKey:SetText(Key, Name, Mode)
-                NewKey.Instance.Text = tostring(Key or "None") .. " - " .. tostring(Name or "None") .. " (" .. tostring(Mode or "None") .. ")"
+            local function updateText(KeyValue, NameValue, ModeValue)
+                local keyText = tostring(KeyValue or "None")
+                local nameText = tostring(NameValue or "None")
+                local modeText = tostring(ModeValue or "None")
+                NewKey.Instance.Text = string.format("%s | %s (%s)", keyText, nameText, modeText)
+            end
+
+            updateText(Key, Name, Mode)
+
+            function NewKey:SetText(KeyValue, NameValue, ModeValue)
+                updateText(KeyValue, NameValue, ModeValue)
             end
 
             function NewKey:SetStatus(Bool)
                 if Bool then
+                    Row.Instance.Visible = true
                     NewKey.Instance.Visible = true
                     NewKey:Tween(nil, {TextTransparency = 0})
+                    Accent:Tween(nil, {BackgroundTransparency = 0})
                 else
                     NewKey:Tween(nil, {TextTransparency = 1}).Tween.Completed:Connect(function()
                         NewKey.Instance.Visible = false
+                        Row.Instance.Visible = false
                     end)
+                    Accent:Tween(nil, {BackgroundTransparency = 1})
                 end
+            end
+
+            function NewKey:SetVisible(Bool)
+                Row.Instance.Visible = Bool
+                NewKey.Instance.Visible = Bool
             end
 
             return NewKey
@@ -5099,8 +5155,8 @@ local Library do
             Items["TargetInfo"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                AnchorPoint = Vector2New(0, 1),
-                Position = UDim2New(0, 12, 1, -88),
+                AnchorPoint = Vector2New(0, 0),
+                Position = UDim2New(0, 12, 0, 58),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -5142,6 +5198,7 @@ local Library do
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
             Items["Title"]:TextBorder()
+            Items["Title"].Instance.ZIndex = 2
 
             Items["Liner"] = Instances:Create("Frame", {
                 Parent = Items["TargetInfo"].Instance,
@@ -5182,40 +5239,69 @@ local Library do
             local contentLayout = Instances:Create("UIListLayout", {
                 Parent = Items["Content"].Instance,
                 Name = "\0",
-                Padding = UDimNew(0, 2),
+                Padding = UDimNew(0, 3),
                 SortOrder = Enum.SortOrder.LayoutOrder
             })
             contentLayout.Instance.VerticalAlignment = Enum.VerticalAlignment.Top
 
-            local function makeLine(name)
-                return Instances:Create("TextLabel", {
+            local function makeField(label)
+                local Row = Instances:Create("Frame", {
                     Parent = Items["Content"].Instance,
+                    Name = "\0",
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    BackgroundColor3 = FromRGB(20, 24, 21),
+                    BorderSizePixel = 1,
+                    Size = UDim2New(1, 0, 0, 18),
+                    AutomaticSize = Enum.AutomaticSize.Y
+                })  Row:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+                Row:Border("Border")
+
+                local Label = Instances:Create("TextLabel", {
+                    Parent = Row.Instance,
                     Name = "\0",
                     FontFace = Library.Font,
                     TextColor3 = FromRGB(235, 235, 235),
                     BorderColor3 = FromRGB(0, 0, 0),
-                    Text = name .. ": None",
-                    Size = UDim2New(0, 0, 0, 14),
+                    Text = label,
+                    Size = UDim2New(0, 72, 1, 0),
                     BackgroundTransparency = 1,
+                    Position = UDim2New(0, 6, 0, 0),
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.X,
+                    AutomaticSize = Enum.AutomaticSize.None,
+                    TextTransparency = 0.2,
                     TextSize = 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
-                })
+                })  Label:AddToTheme({TextColor3 = "Text"})
+                Label:TextBorder()
+                Label.Instance.ZIndex = 2
+
+                local Value = Instances:Create("TextLabel", {
+                    Parent = Row.Instance,
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextColor3 = FromRGB(235, 235, 235),
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Text = "None",
+                    Size = UDim2New(1, -84, 1, 0),
+                    BackgroundTransparency = 1,
+                    Position = UDim2New(0, 78, 0, 0),
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.None,
+                    TextSize = 9,
+                    BackgroundColor3 = FromRGB(255, 255, 255)
+                })  Value:AddToTheme({TextColor3 = "Text"})
+                Value:TextBorder()
+                Value.Instance.ZIndex = 2
+
+                return Row, Value
             end
 
-            Items["Target"] = makeLine("Target")
-            Items["Display"] = makeLine("Display")
-            Items["Health"] = makeLine("Health")
-            Items["Distance"] = makeLine("Distance")
-            Items["Team"] = makeLine("Team")
-
-            for _, item in ipairs({Items["Target"], Items["Display"], Items["Health"], Items["Distance"], Items["Team"]}) do
-                item:AddToTheme({TextColor3 = "Text"})
-                item:TextBorder()
-                item.Instance.ZIndex = 2
-            end
+            Items["TargetRow"], Items["Target"] = makeField("Target")
+            Items["DistanceRow"], Items["Distance"] = makeField("Distance")
+            Items["ToolRow"], Items["Tool"] = makeField("Tool")
+            Items["StatusRow"], Items["Status"] = makeField("Status")
         end
 
         function TargetInfo:SetVisibility(Bool)
@@ -5224,19 +5310,17 @@ local Library do
 
         function TargetInfo:SetTarget(TargetData)
             if not TargetData then
-                Items["Target"].Instance.Text = "Target: None"
-                Items["Display"].Instance.Text = "Display: None"
-                Items["Health"].Instance.Text = "Health: None"
-                Items["Distance"].Instance.Text = "Distance: None"
-                Items["Team"].Instance.Text = "Team: None"
+                Items["Target"].Instance.Text = "None"
+                Items["Distance"].Instance.Text = "0 studs"
+                Items["Tool"].Instance.Text = "None"
+                Items["Status"].Instance.Text = "None"
                 return
             end
 
-            Items["Target"].Instance.Text = "Target: " .. tostring(TargetData.Name or "None")
-            Items["Display"].Instance.Text = "Display: " .. tostring(TargetData.DisplayName or TargetData.Name or "None")
-            Items["Health"].Instance.Text = string.format("Health: %s/%s", tostring(TargetData.Health or 0), tostring(TargetData.MaxHealth or 0))
-            Items["Distance"].Instance.Text = "Distance: " .. tostring(TargetData.Distance or "0") .. " studs"
-            Items["Team"].Instance.Text = "Team: " .. tostring(TargetData.Team or "None")
+            Items["Target"].Instance.Text = tostring(TargetData.Name or "None")
+            Items["Distance"].Instance.Text = tostring(TargetData.Distance or "0") .. " studs"
+            Items["Tool"].Instance.Text = tostring(TargetData.Tool or "None")
+            Items["Status"].Instance.Text = tostring(TargetData.Status or "None")
         end
 
         return TargetInfo

@@ -90,6 +90,18 @@ local function GetTargetInfoData()
     end
 
     local health, maxHealth = getHealth(target.Character)
+    local tool = target.Character:FindFirstChildOfClass("Tool")
+    local status = "Bot"
+
+    if target.Team and LocalPlayer.Team then
+        if target.Team == LocalPlayer.Team then
+            status = "Team"
+        else
+            status = "Enemy"
+        end
+    elseif target.Team then
+        status = "Enemy"
+    end
 
     return {
         Name = target.Name,
@@ -97,7 +109,8 @@ local function GetTargetInfoData()
         Health = health,
         MaxHealth = maxHealth,
         Distance = distance,
-        Team = target.Team and target.Team.Name or "None"
+        Tool = tool and tool.Name or "None",
+        Status = status
     }
 end
 
