@@ -741,8 +741,53 @@ local Library do
         end
     end
 
-    -- Use Enum.Font.Code (Minecraft-like monospace font like FatalityLib)
-    Library.Font = Enum.Font.Code
+    -- Custom font loading
+    local CustomFont = { } do
+        function CustomFont:New(Name, Weight, Style, FilePath)
+            local ok, result = pcall(function()
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+
+                if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then
+                    writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", readfile(FilePath))
+                end
+
+                local FontData = {
+                    name = Name,
+                    faces = { {
+                        name = "Regular",
+                        weight = Weight,
+                        style = Style,
+                        assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
+                    } }
+                }
+
+                writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontData))
+                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+            end)
+            return ok and result or nil
+        end
+
+        function CustomFont:Get(Name)
+            local ok, result = pcall(function()
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+            end)
+            return ok and result or nil
+        end
+
+        local loadedFont = nil
+        pcall(function()
+            loadedFont = CustomFont:New("Monaco", 400, "Regular", "New UI/Monaco.ttf")
+            if not loadedFont then
+                loadedFont = CustomFont:Get("Monaco")
+            end
+        end)
+
+        Library.Font = loadedFont or Enum.Font.Code
+    end
 
     Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
