@@ -744,39 +744,51 @@ local Library do
     -- Custom font
     local CustomFont = { } do
         function CustomFont:New(Name, Weight, Style, Data)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+            local ok, result = pcall(function()
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+
+                if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then
+                    writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(Data.Url))
+                end
+
+                local FontData = {
+                    name = Name,
+                    faces = { {
+                        name = "Regular",
+                        weight = Weight,
+                        style = Style,
+                        assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
+                    } }
+                }
+
+                writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontData))
                 return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
-
-            if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then 
-                writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(Data.Url))
-            end
-
-            local FontData = {
-                name = Name,
-                faces = { {
-                    name = "Regular",
-                    weight = Weight,
-                    style = Style,
-                    assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
-                } }
-            }
-
-            writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontData))
-            return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+            end)
+            return ok and result or nil
         end
 
         function CustomFont:Get(Name)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
-                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
+            local ok, result = pcall(function()
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+            end)
+            return ok and result or nil
         end
 
-        CustomFont:New("Monaco", 400, "Regular", {
-            Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/Monaco.ttf"
-        })
+        local loadedFont = nil
+        pcall(function()
+            loadedFont = CustomFont:New("Monaco", 400, "Regular", {
+                Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/Monaco.ttf"
+            })
+            if not loadedFont then
+                loadedFont = CustomFont:Get("Monaco")
+            end
+        end)
 
-        Library.Font = CustomFont:Get("Monaco")
+        Library.Font = loadedFont or Font.new("rbxasset://fonts/families/RobotoMono.json")
     end
 
     Library.Holder = Instances:Create("ScreenGui", {
@@ -5069,31 +5081,23 @@ local Library do
                 Name = "\0",
                 BorderColor3 = FromRGB(0, 0, 0),
                 BackgroundColor3 = FromRGB(20, 24, 21),
-                BorderSizePixel = 1,
-                Size = UDim2New(1, 0, 0, 20),
-                AutomaticSize = Enum.AutomaticSize.Y
-            })  Row:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
-            Row:Border("Border")
-
-            local Accent = Instances:Create("Frame", {
-                Parent = Row.Instance,
-                Name = "\0",
-                BorderColor3 = FromRGB(0, 0, 0),
-                Size = UDim2New(0, 1, 1, 0),
                 BorderSizePixel = 0,
-                BackgroundColor3 = FromRGB(202, 243, 255)
-            })  Accent:AddToTheme({BackgroundColor3 = "Accent"})
+                Size = UDim2New(1, 0, 0, 16),
+                BackgroundTransparency = 1,
+                AutomaticSize = Enum.AutomaticSize.Y
+            })
 
             local NewKey = Instances:Create("TextLabel", {
                 Parent = Row.Instance,
                 Name = "\0",
                 FontFace = Library.Font,
-                TextColor3 = FromRGB(235, 235, 235),
+                TextColor3 = FromRGB(202, 243, 255),
                 BorderColor3 = FromRGB(0, 0, 0),
                 Text = "",
+                RichText = true,
                 BackgroundTransparency = 1,
-                Position = UDim2New(0, 6, 0, 1),
-                Size = UDim2New(1, -12, 1, -2),
+                Position = UDim2New(0, 0, 0, 0),
+                Size = UDim2New(1, 0, 1, 0),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.None,
                 TextTransparency = 1,
@@ -5101,28 +5105,39 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextSize = 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
-            })  NewKey:AddToTheme({TextColor3 = "Text"})
+            })
             NewKey:TextBorder()
             NewKey.Instance.ZIndex = 2
 
-            local function updateText(KeyValue, NameValue, ModeValue)
-                local keyText = tostring(KeyValue or "None")
-                local nameText = tostring(NameValue or "None")
-                local modeText = tostring(ModeValue or "None")
-                NewKey.Instance.Text = string.format("%s | %s (%s)", keyText, nameText, modeText)
+            local currentToggled = false
+            local currentKey = tostring(Key or "...")
+            local currentName = tostring(Name or "")
+            local currentMode = tostring(Mode or "Toggle")
+
+            local function rebuildText()
+                local keyDisplay = currentKey ~= "" and currentKey or "..."
+                local activeColor = currentToggled and "202, 243, 255" or "150, 150, 150"
+                NewKey.Instance.Text = string.format(
+                    '<font color="rgb(%s)">[%s]</font> <font color="rgb(235, 235, 235)">%s</font> <font color="rgb(120, 120, 120)">(%s)</font>',
+                    activeColor, keyDisplay, currentName, currentMode
+                )
             end
 
-            updateText(Key, Name, Mode)
+            rebuildText()
 
             function NewKey:SetText(KeyValue, NameValue, ModeValue)
-                updateText(KeyValue, NameValue, ModeValue)
+                currentKey = tostring(KeyValue or "...")
+                currentName = tostring(NameValue or "")
+                currentMode = tostring(ModeValue or "Toggle")
+                rebuildText()
             end
 
             function NewKey:SetStatus(Bool)
+                currentToggled = Bool
                 Row.Instance.Visible = true
                 NewKey.Instance.Visible = true
-                NewKey:Tween(nil, {TextTransparency = Bool and 0 or 0.25})
-                Accent:Tween(nil, {BackgroundTransparency = Bool and 0 or 0.65})
+                NewKey:Tween(nil, {TextTransparency = 0})
+                rebuildText()
             end
 
             function NewKey:SetVisible(Bool)
@@ -5141,6 +5156,10 @@ local Library do
     end
 
     Library.TargetInfo = function(self)
+        return { SetTarget = function() end, SetVisibility = function() end }
+    end
+
+    Library.TargetInfo_DISABLED = function(self)
         local TargetInfo = { }
 
         local Items = { } do
@@ -5318,6 +5337,8 @@ local Library do
 
         return TargetInfo
     end
+
+    Library.TargetInfo_DISABLED_END = true
 
     Library.Notification = function(self, Title, Description, Duration)
         local Items = { } do 
@@ -7337,17 +7358,6 @@ local Library do
                             KeybindList:SetVisibility(Value)
                         end
                     })
-
-                    if TargetInfo then
-                        SettingsSection:Toggle({
-                            Name = "Target info",
-                            Flag = "Target info",
-                            Default = true,
-                            Callback = function(Value)
-                                TargetInfo:SetVisibility(Value)
-                            end
-                        })
-                    end
 
                     SettingsSection:Slider({
                         Name = "Fade time",
