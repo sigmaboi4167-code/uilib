@@ -1152,7 +1152,8 @@ local Library do
                 SubPages = { },
                 Items = { },
                 Window = Data.Window,
-                ColumnsData = { }
+                ColumnsData = { },
+                CurrentSubPage = nil
             }
 
             local Items = { } do
@@ -1263,13 +1264,17 @@ local Library do
                         PaddingRight = UDimNew(0, 5),
                     })
 
-                    Instances:Create("UIListLayout", {
+                    local SubPagesLayout = Instances:Create("UIListLayout", {
                         Parent = Items["SubPages"].Instance,
                         Name = "\0",
                         FillDirection = Enum.FillDirection.Vertical,
                         Padding = UDimNew(0, 2),
                         SortOrder = Enum.SortOrder.LayoutOrder
                     })
+
+                    SubPagesLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                        Items["SubPages"].Instance.CanvasSize = UDim2New(0, 0, 0, SubPagesLayout.AbsoluteContentSize.Y + 12)
+                    end)
 
                     Items["Columns"] = Instances:Create("Frame", {
                         Parent = Items["Page"].Instance,
@@ -1538,6 +1543,17 @@ local Library do
                 end
 
                 local parentContainer = Data.Page._categoryBtns[catKey].container
+
+                -- Ensure the default container has a layout if it doesn't have one
+                if not Data.Page._categoryBtns[catKey].layout and not parentContainer.Instance:FindFirstChildOfClass("UIListLayout") then
+                    Data.Page._categoryBtns[catKey].layout = Instances:Create("UIListLayout", {
+                        Parent = parentContainer.Instance,
+                        Name = "\0",
+                        FillDirection = Enum.FillDirection.Vertical,
+                        Padding = UDimNew(0, 2),
+                        SortOrder = Enum.SortOrder.LayoutOrder
+                    })
+                end
 
                 -- The actual subtab button
                 Items["Inactive"] = Instances:Create("TextButton", {
