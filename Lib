@@ -1210,6 +1210,24 @@ local Library do
 
                 Items["TextStroke"] = Items["Text"]:TextBorder()
 
+                if Data.SubPages then
+                    Items["Arrow"] = Instances:Create("TextLabel", {
+                        Parent = Items["Inactive"].Instance,
+                        Name = "\0",
+                        FontFace = Library.Font,
+                        TextColor3 = FromRGB(235, 235, 235),
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        Text = "v",
+                        AnchorPoint = Vector2New(1, 0.5),
+                        Size = UDim2New(0, 12, 0, 12),
+                        BackgroundTransparency = 1,
+                        Position = UDim2New(1, -8, 0.5, 0),
+                        BorderSizePixel = 0,
+                        TextSize = 8,
+                        BackgroundColor3 = FromRGB(255, 255, 255)
+                    })  Items["Arrow"]:AddToTheme({TextColor3 = "Text"})
+                end
+
                 Items["Glow"] = Instances:Create("Frame", {
                     Parent = Items["Inactive"].Instance,
                     Name = "\0",
@@ -1237,20 +1255,14 @@ local Library do
                 })
 
                 if Data.SubPages then
-                    -- Fatality-style: vertical left sidebar for subtab categories
-                    Items["SubPages"] = Instances:Create("ScrollingFrame", {
+                    Items["SubPages"] = Instances:Create("Frame", {
                         Parent = Items["Page"].Instance,
                         Name = "\0",
-                        Size = UDim2New(0, 148, 1, 0),
-                        Position = UDim2New(0, 0, 0, 0),
+                        Size = UDim2New(0, 0, 0, 35),
                         BorderColor3 = FromRGB(42, 49, 45),
                         BorderSizePixel = 2,
-                        BackgroundColor3 = FromRGB(20, 24, 21),
-                        ScrollBarThickness = 2,
-                        ScrollBarImageColor3 = FromRGB(42, 49, 45),
-                        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                        CanvasSize = UDim2New(0, 0, 0, 0),
-                        Active = true,
+                        AutomaticSize = Enum.AutomaticSize.X,
+                        BackgroundColor3 = FromRGB(20, 24, 21)
                     })  Items["SubPages"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Outline"})
 
                     Items["SubPages"]:Border("Border")
@@ -1258,31 +1270,26 @@ local Library do
                     Instances:Create("UIPadding", {
                         Parent = Items["SubPages"].Instance,
                         Name = "\0",
-                        PaddingTop = UDimNew(0, 6),
-                        PaddingBottom = UDimNew(0, 6),
-                        PaddingLeft = UDimNew(0, 5),
-                        PaddingRight = UDimNew(0, 5),
+                        PaddingRight = UDimNew(0, 7),
+                        PaddingLeft = UDimNew(0, 7)
                     })
 
-                    local SubPagesLayout = Instances:Create("UIListLayout", {
+                    Instances:Create("UIListLayout", {
                         Parent = Items["SubPages"].Instance,
                         Name = "\0",
-                        FillDirection = Enum.FillDirection.Vertical,
-                        Padding = UDimNew(0, 2),
+                        VerticalAlignment = Enum.VerticalAlignment.Center,
+                        FillDirection = Enum.FillDirection.Horizontal,
+                        Padding = UDimNew(0, 12),
                         SortOrder = Enum.SortOrder.LayoutOrder
                     })
-
-                    SubPagesLayout.Instance:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                        Items["SubPages"].Instance.CanvasSize = UDim2New(0, 0, 0, SubPagesLayout.AbsoluteContentSize.Y + 12)
-                    end)
 
                     Items["Columns"] = Instances:Create("Frame", {
                         Parent = Items["Page"].Instance,
                         Name = "\0",
                         BackgroundTransparency = 1,
-                        Position = UDim2New(0, 156, 0, 0),
+                        Position = UDim2New(0, 0, 0, 51),
                         BorderColor3 = FromRGB(42, 49, 45),
-                        Size = UDim2New(1, -156, 1, 0),
+                        Size = UDim2New(1, 0, 1, -51),
                         BorderSizePixel = 0,
                         BackgroundColor3 = FromRGB(255, 255, 255)
                     })
@@ -1423,203 +1430,106 @@ local Library do
         end
 
         Components.WindowSubPage = function(self, Data)
-            -- Fatality-style: vertical left-sidebar subtab button with optional category grouping
             local SubPage = {
                 Active = false,
                 ColumnsData = { }
             }
 
             local Items = { } do
-                -- Category header (optional, shown above groups of subtabs)
-                if Data.CategoryName and not Data.Page._lastCategory then
-                    Data.Page._lastCategory = Data.CategoryName
-                end
-
-                -- If this is the first subtab for a new category, create a category header row
-                local catKey = Data.CategoryName or "__none__"
-                if not Data.Page._categoryBtns then Data.Page._categoryBtns = {} end
-                if not Data.Page._categoryBtns[catKey] then
-                    if Data.CategoryName then
-                        -- Category header button (collapsible)
-                        local CatBtn = Instances:Create("TextButton", {
-                            Parent = Data.Page.Items["SubPages"].Instance,
-                            Name = "\0",
-                            FontFace = Library.Font,
-                            TextColor3 = FromRGB(235, 235, 235),
-                            BorderColor3 = FromRGB(42, 49, 45),
-                            Text = "",
-                            AutoButtonColor = false,
-                            Size = UDim2New(1, 0, 0, 22),
-                            BorderSizePixel = 1,
-                            BackgroundColor3 = FromRGB(25, 30, 26)
-                        })  CatBtn:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
-
-                        Instances:Create("UICorner", {
-                            Parent = CatBtn.Instance,
-                            CornerRadius = UDimNew(0, 3)
-                        })
-
-                        local CatLabel = Instances:Create("TextLabel", {
-                            Parent = CatBtn.Instance,
-                            Name = "\0",
-                            FontFace = Library.Font,
-                            TextColor3 = FromRGB(235, 235, 235),
-                            BorderColor3 = FromRGB(0, 0, 0),
-                            Text = Data.CategoryName,
-                            AnchorPoint = Vector2New(0, 0.5),
-                            Size = UDim2New(1, -20, 0, 14),
-                            BackgroundTransparency = 1,
-                            Position = UDim2New(0, 7, 0.5, 0),
-                            BorderSizePixel = 0,
-                            TextXAlignment = Enum.TextXAlignment.Left,
-                            TextSize = 9,
-                            BackgroundColor3 = FromRGB(255, 255, 255)
-                        })  CatLabel:AddToTheme({TextColor3 = "Text"})
-
-                        CatLabel:TextBorder()
-
-                        local ArrowLbl = Instances:Create("TextLabel", {
-                            Parent = CatBtn.Instance,
-                            Name = "\0",
-                            FontFace = Library.Font,
-                            TextColor3 = FromRGB(100, 100, 110),
-                            Text = "v",
-                            AnchorPoint = Vector2New(1, 0.5),
-                            Size = UDim2New(0, 12, 0, 12),
-                            BackgroundTransparency = 1,
-                            Position = UDim2New(1, -5, 0.5, 0),
-                            BorderSizePixel = 0,
-                            TextSize = 8,
-                            BackgroundColor3 = FromRGB(255, 255, 255)
-                        })
-
-                        -- Container that will hold this category's subtabs
-                        local CatContainer = Instances:Create("Frame", {
-                            Parent = Data.Page.Items["SubPages"].Instance,
-                            Name = "\0",
-                            Size = UDim2New(1, 0, 0, 0),
-                            BackgroundTransparency = 1,
-                            BorderSizePixel = 0,
-                            ClipsDescendants = true,
-                            BackgroundColor3 = FromRGB(255, 255, 255)
-                        })
-
-                        local CatLayout = Instances:Create("UIListLayout", {
-                            Parent = CatContainer.Instance,
-                            Name = "\0",
-                            Padding = UDimNew(0, 2),
-                            SortOrder = Enum.SortOrder.LayoutOrder
-                        })
-
-                        local catExpanded = true
-
-                        local function updateCatSize()
-                            local h = CatLayout.AbsoluteContentSize.Y
-                            CatContainer.Instance.Size = UDim2New(1, 0, 0, catExpanded and h or 0)
-                        end
-
-                        CatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                            if catExpanded then updateCatSize() end
-                        end)
-
-                        local function toggleCat()
-                            catExpanded = not catExpanded
-                            ArrowLbl.Instance.Text = catExpanded and "v" or ">"
-                            local targetH = catExpanded and CatLayout.AbsoluteContentSize.Y or 0
-                            TweenService:Create(CatContainer.Instance, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2New(1, 0, 0, targetH)}):Play()
-                        end
-
-                        CatBtn:Connect("MouseButton1Down", function() toggleCat() end)
-                        Library:Connect(CatBtn.Instance.TouchTap, function() toggleCat() end)
-
-                        Data.Page._categoryBtns[catKey] = {
-                            container = CatContainer,
-                            layout = CatLayout,
-                            updateSize = updateCatSize
-                        }
-                    else
-                        Data.Page._categoryBtns[catKey] = { container = Data.Page.Items["SubPages"], layout = nil, updateSize = function() end }
-                    end
-                end
-
-                local parentContainer = Data.Page._categoryBtns[catKey].container
-
-                -- Ensure the default container has a layout if it doesn't have one
-                if not Data.Page._categoryBtns[catKey].layout and not parentContainer.Instance:FindFirstChildOfClass("UIListLayout") then
-                    Data.Page._categoryBtns[catKey].layout = Instances:Create("UIListLayout", {
-                        Parent = parentContainer.Instance,
-                        Name = "\0",
-                        FillDirection = Enum.FillDirection.Vertical,
-                        Padding = UDimNew(0, 2),
-                        SortOrder = Enum.SortOrder.LayoutOrder
-                    })
-                end
-
-                -- The actual subtab button
                 Items["Inactive"] = Instances:Create("TextButton", {
-                    Parent = parentContainer.Instance,
+                    Parent = Data.Page.Items["SubPages"].Instance,
                     Name = "\0",
                     FontFace = Library.Font,
-                    TextColor3 = FromRGB(150, 150, 160),
+                    TextColor3 = FromRGB(0, 0, 0),
                     BorderColor3 = FromRGB(12, 12, 12),
                     Text = "",
                     AutoButtonColor = false,
-                    BackgroundTransparency = 1,
-                    Size = UDim2New(1, 0, 0, 20),
-                    BorderSizePixel = 0,
-                    TextSize = 9,
-                    BackgroundColor3 = FromRGB(30, 35, 32)
-                })
+                    BackgroundTransparency = 0.6000000238418579,
+                    Size = UDim2New(0, 0, 0, 20),
+                    BorderSizePixel = 2,
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    TextSize = 14,
+                    BackgroundColor3 = FromRGB(25, 30, 26)
+                })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Border"})
 
-                Instances:Create("UICorner", {
-                    Parent = Items["Inactive"].Instance,
-                    CornerRadius = UDimNew(0, 3)
-                })
-
-                -- Left accent liner (hidden when inactive)
-                Items["Liner"] = Instances:Create("Frame", {
+                Items["ButtonBorder"] = Instances:Create("UIStroke", {
                     Parent = Items["Inactive"].Instance,
                     Name = "\0",
-                    BackgroundTransparency = 1,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Size = UDim2New(0, 2, 0.7, 0),
-                    AnchorPoint = Vector2New(0, 0.5),
-                    Position = UDim2New(0, 2, 0.5, 0),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(202, 243, 255)
-                })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
-
-                Instances:Create("UICorner", {
-                    Parent = Items["Liner"].Instance,
-                    CornerRadius = UDimNew(0, 2)
-                })
+                    Color = FromRGB(61, 60, 65),
+                    Transparency = 0.6,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                })  Items["ButtonBorder"]:AddToTheme({Color = "Outline"})
 
                 Items["Text"] = Instances:Create("TextLabel", {
                     Parent = Items["Inactive"].Instance,
                     Name = "\0",
                     FontFace = Library.Font,
-                    TextColor3 = FromRGB(150, 150, 160),
+                    TextColor3 = FromRGB(235, 235, 235),
                     BorderColor3 = FromRGB(0, 0, 0),
                     Text = Data.Name,
-                    AnchorPoint = Vector2New(0, 0.5),
-                    Size = UDim2New(1, -14, 0, 14),
+                    AnchorPoint = Vector2New(0.5, 0.5),
+                    Size = UDim2New(0, 0, 0, 15),
                     BackgroundTransparency = 1,
-                    Position = UDim2New(0, 10, 0.5, 0),
+                    Position = UDim2New(0.5, -5, 0.5, 0),
                     BorderSizePixel = 0,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextSize = 10,
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    TextSize = 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
-                Items["Text"]:TextBorder()
+                Items["TextStroke"] = Items["Text"]:TextBorder()
+
+                Instances:Create("UIPadding", {
+                    Parent = Items["Text"].Instance,
+                    Name = "\0",
+                    PaddingRight = UDimNew(0, 8),
+                    PaddingLeft = UDimNew(0, 8)
+                })
+
+                Instances:Create("UIPadding", {
+                    Parent = Items["Inactive"].Instance,
+                    Name = "\0",
+                    PaddingTop = UDimNew(0, 2),
+                    PaddingLeft = UDimNew(0, 18),
+                    PaddingRight = UDimNew(0, 12)
+                })
+
+                Items["Glow"] = Instances:Create("Frame", {
+                    Parent = Items["Inactive"].Instance,
+                    Name = "\0",
+                    BackgroundTransparency = 1,
+                    Position = UDim2New(0, -18, 0, -2),
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Size = UDim2New(0, 20, 1, 2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = FromRGB(25, 30, 26)
+                })  Items["Glow"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+                Instances:Create("UIGradient", {
+                    Parent = Items["Glow"].Instance,
+                    Name = "\0",
+                    Transparency = NumSequence{NumSequenceKeypoint(0, 0), NumSequenceKeypoint(0.193, 0.8687499761581421), NumSequenceKeypoint(0.504, 0.96875), NumSequenceKeypoint(1, 1)}
+                })
+
+                Items["Liner"] = Instances:Create("Frame", {
+                    Parent = Items["Inactive"].Instance,
+                    Name = "\0",
+                    BackgroundTransparency = 1,
+                    Position = UDim2New(0, -18, 0, -2),
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Size = UDim2New(0, 1, 1, 2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = FromRGB(202, 243, 255)
+                })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
                 Items["Page"] = Instances:Create("Frame", {
                     Parent = Data.Page.Items["Columns"].Instance,
                     Name = "\0",
                     BackgroundTransparency = 1,
-                    Position = UDim2New(0, 0, 0, 0),
+                    Position = UDim2New(0, -2, 0, -2),
                     BorderColor3 = FromRGB(0, 0, 0),
-                    Size = UDim2New(1, 0, 1, 0),
+                    Size = UDim2New(1, 2, 1, 0),
                     BorderSizePixel = 0,
                     Visible = false,
                     BackgroundColor3 = FromRGB(255, 255, 255)
@@ -1675,36 +1585,45 @@ local Library do
             Library.SearchItems[SubPage] = { }
 
             function SubPage:Turn(Bool)
-                if Debounce then return end
+                if Debounce then 
+                    return 
+                end
 
-                SubPage.Active = Bool
+                SubPage.Active = Bool 
                 Debounce = true
-                Items["Page"].Instance.Visible = Bool
+                Items["Page"].Instance.Visible = Bool 
                 Items["Page"].Instance.Parent = Bool and Data.Page.Items["Columns"].Instance or Library.UnusedHolder.Instance
 
                 if SubPage.Active then
-                    Items["Inactive"]:Tween(nil, {BackgroundTransparency = 0, BackgroundColor3 = Library.Theme["Hovered Element"]})
+                    Items["Inactive"]:Tween(nil, {BackgroundTransparency = 0})
+                    Items["ButtonBorder"]:Tween(nil, {Transparency = 0})
                     Items["Liner"]:Tween(nil, {BackgroundTransparency = 0})
-                    Items["Text"]:Tween(nil, {TextColor3 = Library.Theme.Accent})
+                    Items["Glow"]:Tween(nil, {BackgroundTransparency = 0})
+                    Items["Text"]:Tween(nil, {Position = UDim2New(0.5, 0, 0.5, 0)})
 
                     Library.CurrentPage = SubPage
                 else
-                    Items["Inactive"]:Tween(nil, {BackgroundTransparency = 1})
+                    Items["Inactive"]:Tween(nil, {BackgroundTransparency = 0.6})
+                    Items["ButtonBorder"]:Tween(nil, {Transparency = 0.6})
+                    Items["Glow"]:Tween(nil, {BackgroundTransparency = 1})
                     Items["Liner"]:Tween(nil, {BackgroundTransparency = 1})
-                    Items["Text"]:Tween(nil, {TextColor3 = FromRGB(150, 150, 160)})
+                    Items["Text"]:Tween(nil, {Position = UDim2New(0.5, -5, 0.5, 0)})
                 end
 
-                -- Safe fade: only fire if there are tweenable items
                 local AllInstances = Items["Page"].Instance:GetDescendants()
                 TableInsert(AllInstances, Items["Page"].Instance)
+                
+                local NewTween 
 
-                local NewTween
-                for Index, Value in AllInstances do
+                for Index, Value in AllInstances do 
                     local TransparencyProperty = Tween:GetProperty(Value)
-                    if not TransparencyProperty then continue end
 
-                    if type(TransparencyProperty) == "table" then
-                        for _, Property in TransparencyProperty do
+                    if not TransparencyProperty then 
+                        continue
+                    end
+
+                    if type(TransparencyProperty) == "table" then 
+                        for _, Property in TransparencyProperty do 
                             NewTween = Tween:FadeItem(Value, Property, Bool, Data.Window.FadeTime)
                         end
                     else
@@ -1712,34 +1631,19 @@ local Library do
                     end
                 end
 
-                if NewTween then
-                    Library:Connect(NewTween.Tween.Completed, function()
-                        Debounce = false
-                    end)
-                else
+                Library:Connect(NewTween.Tween.Completed, function()
                     Debounce = false
-                end
+                end)
             end
 
-            -- Mobile + Mouse support
-            local function handleClick()
-                for Index, Value in Data.Page.SubPages do
-                    if Value == SubPage and SubPage.Active then return end
+            Items["Inactive"]:Connect("MouseButton1Down", function()
+                for Index, Value in Data.Page.SubPages do 
+                    if Value == SubPage and SubPage.Active then
+                        return
+                    end
+
                     Value:Turn(Value == SubPage)
                 end
-            end
-
-            Items["Inactive"]:Connect("MouseButton1Down", handleClick)
-            Library:Connect(Items["Inactive"].Instance.TouchTap, handleClick)
-
-            Items["Inactive"]:OnHover(function()
-                if SubPage.Active then return end
-                Items["Text"]:Tween(nil, {TextColor3 = Library.Theme.Text})
-            end)
-
-            Items["Inactive"]:OnHoverLeave(function()
-                if SubPage.Active then return end
-                Items["Text"]:Tween(nil, {TextColor3 = FromRGB(150, 150, 160)})
             end)
 
             if #Data.Page.SubPages == 0 then
@@ -6151,7 +6055,6 @@ local Library do
 
             Name = Data.Name or Data.name or "SubPage",
             Columns = Data.Columns or Data.columns or 2,
-            CategoryName = Data.Category or Data.category or nil,
         }
 
         Library.SearchItems[SubPage] = { }
@@ -6160,8 +6063,7 @@ local Library do
             Page = SubPage.Page,
             Name = SubPage.Name,
             Columns = SubPage.Columns,
-            Window = SubPage.Page.Window,
-            CategoryName = SubPage.CategoryName,
+            Window = SubPage.Page.Window
         })
 
         return setmetatable(NewSubPage, Library.Pages)
