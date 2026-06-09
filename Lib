@@ -5057,40 +5057,26 @@ local Library do
                 Name = "\0",
                 AnchorPoint = Vector2New(0, 1),
                 Position = UDim2New(0, 12, 1, -12),
-                BorderColor3 = FromRGB(0, 0, 0),
+                BorderColor3 = FromRGB(42, 49, 45),
                 Size = UDim2New(0, 200, 0, 20),
-                BorderSizePixel = 0,
+                BorderSizePixel = 1,
                 AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundColor3 = FromRGB(17, 17, 17)
+                BackgroundColor3 = FromRGB(20, 24, 21)
             })  Items["KeybindList"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Outline"})
 
             Items["KeybindList"]:MakeDraggable()
-
-            Instances:Create("UICorner", {
-                Parent = Items["KeybindList"].Instance,
-                CornerRadius = UDimNew(0, 8)
-            })
-
-            Instances:Create("UIStroke", {
-                Parent = Items["KeybindList"].Instance,
-                Name = "\0",
-                Color = FromRGB(120, 80, 255),
-                Thickness = 1.5,
-                LineJoinMode = Enum.LineJoinMode.Round,
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            })
 
             Items["Title"] = Instances:Create("TextButton", {
                 Parent = Items["KeybindList"].Instance,
                 Name = "\0",
                 FontFace = Library.Font,
-                TextColor3 = FromRGB(255, 255, 255),
+                TextColor3 = FromRGB(235, 235, 235),
                 BorderColor3 = FromRGB(0, 0, 0),
                 Text = "Keybinds [-]",
-                Size = UDim2New(1, 0, 0, 26),
+                Size = UDim2New(1, 0, 0, 20),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
-                TextSize = 11,
+                TextSize = 9,
                 AutoButtonColor = false,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
@@ -5102,7 +5088,7 @@ local Library do
                 Name = "\0",
                 BorderColor3 = FromRGB(0, 0, 0),
                 BackgroundTransparency = 1,
-                Position = UDim2New(0, 0, 0, 26),
+                Position = UDim2New(0, 0, 0, 20),
                 Size = UDim2New(1, 0, 0, 0),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -5113,17 +5099,8 @@ local Library do
             Instances:Create("UIListLayout", {
                 Parent = Items["Content"].Instance,
                 Name = "\0",
-                Padding = UDimNew(0, 3),
+                Padding = UDimNew(0, 2),
                 SortOrder = Enum.SortOrder.LayoutOrder
-            })
-
-            Instances:Create("UIPadding", {
-                Parent = Items["Content"].Instance,
-                Name = "\0",
-                PaddingLeft = UDimNew(0, 6),
-                PaddingRight = UDimNew(0, 6),
-                PaddingTop = UDimNew(0, 4),
-                PaddingBottom = UDimNew(0, 4)
             })
 
             local isExpanded = true
@@ -5138,27 +5115,13 @@ local Library do
             local Row = Instances:Create("Frame", {
                 Parent = Items["Content"].Instance,
                 Name = "\0",
-                BorderColor3 = FromRGB(0, 0, 0),
-                BackgroundColor3 = FromRGB(25, 25, 30),
-                BorderSizePixel = 0,
-                Size = UDim2New(1, 0, 0, 24),
+                BorderColor3 = FromRGB(42, 49, 45),
+                BackgroundColor3 = FromRGB(25, 30, 26),
+                BorderSizePixel = 1,
+                Size = UDim2New(1, 0, 0, 18),
                 BackgroundTransparency = 0,
                 AutomaticSize = Enum.AutomaticSize.Y
             })  Row:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Outline"})
-
-            Instances:Create("UICorner", {
-                Parent = Row.Instance,
-                CornerRadius = UDimNew(0, 5)
-            })
-
-            Instances:Create("UIStroke", {
-                Parent = Row.Instance,
-                Name = "\0",
-                Color = FromRGB(60, 60, 70),
-                Thickness = 1,
-                LineJoinMode = Enum.LineJoinMode.Round,
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            })
 
             local NewKey = Instances:Create("TextLabel", {
                 Parent = Row.Instance,
@@ -5177,17 +5140,17 @@ local Library do
                 Visible = true,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextYAlignment = Enum.TextYAlignment.Center,
-                TextSize = 10,
+                TextSize = 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
             Instances:Create("UIPadding", {
                 Parent = Row.Instance,
                 Name = "\0",
-                PaddingLeft = UDimNew(0, 10),
-                PaddingRight = UDimNew(0, 10),
-                PaddingTop = UDimNew(0, 4),
-                PaddingBottom = UDimNew(0, 4)
+                PaddingLeft = UDimNew(0, 6),
+                PaddingRight = UDimNew(0, 6),
+                PaddingTop = UDimNew(0, 2),
+                PaddingBottom = UDimNew(0, 2)
             })
 
             Row.Instance.Visible = true
@@ -5202,14 +5165,14 @@ local Library do
                 local isBound = keyDisplay ~= "..."
                 local keyColor
                 if currentToggled then
-                    keyColor = "170, 110, 255"
+                    keyColor = "202, 243, 255"
                 elseif isBound then
-                    keyColor = "140, 140, 160"
+                    keyColor = "150, 150, 160"
                 else
-                    keyColor = "80, 80, 90"
+                    keyColor = "90, 90, 100"
                 end
-                local nameColor = isBound and "220, 220, 230" or "120, 120, 130"
-                local modeText = currentMode ~= "Toggle" and string.format(" <font color=\"rgb(130, 130, 140)\">(%s)</font>", currentMode) or ""
+                local nameColor = isBound and "235, 235, 235" or "130, 130, 140"
+                local modeText = currentMode ~= "Toggle" and string.format(" <font color=\"rgb(140, 140, 150)\">(%s)</font>", currentMode) or ""
                 NewKey.Instance.Text = string.format(
                     '<font color="rgb(%s)">[%s]</font> <font color="rgb(%s)">%s</font>%s',
                     keyColor, keyDisplay, nameColor, currentName, modeText
@@ -5230,15 +5193,6 @@ local Library do
                 Row.Instance.Visible = true
                 NewKey.Instance.Visible = true
                 NewKey.Instance.TextTransparency = 0
-                
-                if Bool then
-                    Row.Instance.BackgroundColor3 = FromRGB(35, 30, 45)
-                    Row.Instance:FindFirstChildOfClass("UIStroke").Color = FromRGB(120, 80, 255)
-                else
-                    Row.Instance.BackgroundColor3 = FromRGB(25, 25, 30)
-                    Row.Instance:FindFirstChildOfClass("UIStroke").Color = FromRGB(60, 60, 70)
-                end
-                
                 rebuildText()
             end
 
