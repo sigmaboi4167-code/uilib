@@ -3957,7 +3957,7 @@ local Library do
             local KeylistItem
 
             if Library.KeyList then
-                KeylistItem = Library.KeyList:Add("", "", "")
+                KeylistItem = Library.KeyList:Add("", Data.Name or "", "")
             end
 
             local Items = { } do
