@@ -1272,7 +1272,7 @@ local Library do
                         SortOrder = Enum.SortOrder.LayoutOrder
                     })
 
-                    SubPagesLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    SubPagesLayout.Instance:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
                         Items["SubPages"].Instance.CanvasSize = UDim2New(0, 0, 0, SubPagesLayout.AbsoluteContentSize.Y + 12)
                     end)
 
