@@ -1111,6 +1111,46 @@ local Library do
                 end
 
                 Items["UIStroke"] = Items["Window"]:Border("Outline")
+
+                -- Mobile toggle button
+                local isMobile = UserInputService.TouchEnabled
+                if isMobile then
+                    Items["MobileToggle"] = Instances:Create("TextButton", {
+                        Parent = Library.Holder.Instance,
+                        Name = "\0",
+                        FontFace = Library.Font,
+                        TextColor3 = FromRGB(235, 235, 235),
+                        BorderColor3 = FromRGB(42, 49, 45),
+                        Text = "☰",
+                        AutoButtonColor = false,
+                        Size = UDim2New(0, 40, 0, 40),
+                        Position = UDim2New(1, -50, 0, 10),
+                        BorderSizePixel = 1,
+                        TextSize = 20,
+                        BackgroundColor3 = FromRGB(25, 30, 26)
+                    })  Items["MobileToggle"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Outline"})
+
+                    Instances:Create("UICorner", {
+                        Parent = Items["MobileToggle"].Instance,
+                        CornerRadius = UDimNew(0, 8)
+                    })
+
+                    Items["MobileToggle"]:TextBorder()
+
+                    local windowVisible = true
+                    Items["MobileToggle"]:Connect("MouseButton1Click", function()
+                        windowVisible = not windowVisible
+                        Items["Window"].Instance.Visible = windowVisible
+                    end)
+                    Library:Connect(Items["MobileToggle"].Instance.TouchTap, function()
+                        windowVisible = not windowVisible
+                        Items["Window"].Instance.Visible = windowVisible
+                    end)
+
+                    -- Make window smaller for mobile
+                    Items["Window"].Instance.Size = UDim2New(0, 350, 0, 400)
+                    Items["Window"].Instance.Position = UDim2New(0.5, -175, 0.5, -200)
+                end
             end
 
             return Items
@@ -1207,44 +1247,6 @@ local Library do
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
                 Items["TextStroke"] = Items["Text"]:TextBorder()
-
-                if Data.SubPages then
-                    -- Custom frame-based arrow like FatalityLib
-                    local ArrowContainer = Instances:Create("Frame", {
-                        Parent = Items["Inactive"].Instance,
-                        Name = "\0",
-                        Size = UDim2New(0, 8, 0, 4),
-                        Position = UDim2New(1, -15, 0.5, -2),
-                        BackgroundTransparency = 1,
-                        BorderColor3 = FromRGB(0, 0, 0),
-                        BorderSizePixel = 0,
-                        BackgroundColor3 = FromRGB(255, 255, 255)
-                    })
-
-                    local ArrowLeft = Instances:Create("Frame", {
-                        Parent = ArrowContainer.Instance,
-                        Name = "\0",
-                        Size = UDim2New(0, 5, 0, 2),
-                        Position = UDim2New(0, 0, 0, 1),
-                        Rotation = 45,
-                        BorderColor3 = FromRGB(0, 0, 0),
-                        BorderSizePixel = 0,
-                        BackgroundColor3 = FromRGB(150, 150, 160)
-                    })  ArrowLeft:AddToTheme({BackgroundColor3 = "TextDark"})
-
-                    local ArrowRight = Instances:Create("Frame", {
-                        Parent = ArrowContainer.Instance,
-                        Name = "\0",
-                        Size = UDim2New(0, 5, 0, 2),
-                        Position = UDim2New(0, 3, 0, 1),
-                        Rotation = -45,
-                        BorderColor3 = FromRGB(0, 0, 0),
-                        BorderSizePixel = 0,
-                        BackgroundColor3 = FromRGB(150, 150, 160)
-                    })  ArrowRight:AddToTheme({BackgroundColor3 = "TextDark"})
-
-                    Items["Arrow"] = ArrowContainer
-                end
 
                 Items["Glow"] = Instances:Create("Frame", {
                     Parent = Items["Inactive"].Instance,
