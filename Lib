@@ -741,16 +741,16 @@ local Library do
         end
     end
 
-    -- Custom font
+    -- Custom font loading
     local CustomFont = { } do
-        function CustomFont:New(Name, Weight, Style, Data)
+        function CustomFont:New(Name, Weight, Style, FilePath)
             local ok, result = pcall(function()
                 if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
                     return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
                 end
 
                 if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then
-                    writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(Data.Url))
+                    writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", readfile(FilePath))
                 end
 
                 local FontData = {
@@ -780,15 +780,13 @@ local Library do
 
         local loadedFont = nil
         pcall(function()
-            loadedFont = CustomFont:New("Monaco", 400, "Regular", {
-                Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/Monaco.ttf"
-            })
+            loadedFont = CustomFont:New("Monaco", 400, "Regular", "New UI/Monaco.ttf")
             if not loadedFont then
                 loadedFont = CustomFont:Get("Monaco")
             end
         end)
 
-        Library.Font = loadedFont or Font.new("rbxasset://fonts/families/RobotoMono.json")
+        Library.Font = loadedFont or Enum.Font.Code
     end
 
     Library.Holder = Instances:Create("ScreenGui", {
@@ -1211,21 +1209,41 @@ local Library do
                 Items["TextStroke"] = Items["Text"]:TextBorder()
 
                 if Data.SubPages then
-                    Items["Arrow"] = Instances:Create("TextLabel", {
+                    -- Custom frame-based arrow like FatalityLib
+                    local ArrowContainer = Instances:Create("Frame", {
                         Parent = Items["Inactive"].Instance,
                         Name = "\0",
-                        FontFace = Library.Font,
-                        TextColor3 = FromRGB(235, 235, 235),
-                        BorderColor3 = FromRGB(0, 0, 0),
-                        Text = "v",
-                        AnchorPoint = Vector2New(1, 0.5),
-                        Size = UDim2New(0, 12, 0, 12),
+                        Size = UDim2New(0, 8, 0, 4),
+                        Position = UDim2New(1, -15, 0.5, -2),
                         BackgroundTransparency = 1,
-                        Position = UDim2New(1, -8, 0.5, 0),
+                        BorderColor3 = FromRGB(0, 0, 0),
                         BorderSizePixel = 0,
-                        TextSize = 8,
                         BackgroundColor3 = FromRGB(255, 255, 255)
-                    })  Items["Arrow"]:AddToTheme({TextColor3 = "Text"})
+                    })
+
+                    local ArrowLeft = Instances:Create("Frame", {
+                        Parent = ArrowContainer.Instance,
+                        Name = "\0",
+                        Size = UDim2New(0, 5, 0, 2),
+                        Position = UDim2New(0, 0, 0, 1),
+                        Rotation = 45,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        BorderSizePixel = 0,
+                        BackgroundColor3 = FromRGB(150, 150, 160)
+                    })  ArrowLeft:AddToTheme({BackgroundColor3 = "TextDark"})
+
+                    local ArrowRight = Instances:Create("Frame", {
+                        Parent = ArrowContainer.Instance,
+                        Name = "\0",
+                        Size = UDim2New(0, 5, 0, 2),
+                        Position = UDim2New(0, 3, 0, 1),
+                        Rotation = -45,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        BorderSizePixel = 0,
+                        BackgroundColor3 = FromRGB(150, 150, 160)
+                    })  ArrowRight:AddToTheme({BackgroundColor3 = "TextDark"})
+
+                    Items["Arrow"] = ArrowContainer
                 end
 
                 Items["Glow"] = Instances:Create("Frame", {
