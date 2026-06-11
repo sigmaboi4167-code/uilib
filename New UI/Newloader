@@ -1,0 +1,949 @@
+
+if getgenv().EWareLoaded then
+	getgenv().EWareLoaded:Unload()
+end
+
+
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
+local TweenService     = game:GetService("TweenService")
+local CoreGui          = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
+local LocalPlayer      = Players.LocalPlayer
+
+-- ────────────────────────────────────────────────
+-- Theme
+-- ────────────────────────────────────────────────
+
+local Theme = {
+	Background  = Color3.fromRGB(14, 17, 15),
+	Border      = Color3.fromRGB(12, 12, 12),
+	Inline      = Color3.fromRGB(20, 24, 21),
+	Element     = Color3.fromRGB(30, 36, 31),
+	Hovered     = Color3.fromRGB(37, 42, 45),
+	Outline     = Color3.fromRGB(42, 49, 45),
+	Text        = Color3.fromRGB(235, 235, 235),
+	TextStroke  = Color3.fromRGB(0, 0, 0),
+	Placeholder = Color3.fromRGB(185, 185, 185),
+	Accent      = Color3.fromRGB(202, 243, 255),
+	Gradient    = Color3.fromRGB(208, 208, 208),
+	Error       = Color3.fromRGB(220, 75, 55),
+	Snow        = Color3.fromRGB(220, 235, 245),
+}
+
+-- ────────────────────────────────────────────────
+-- Config
+-- ────────────────────────────────────────────────
+
+local GAMES = {
+	{
+		name      = "Trident Survival",
+		url       = "",
+		thumbnail = "https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/Trident.webp",
+		color     = Color3.fromRGB(0, 210, 100),
+		status    = "Undetected",
+	},
+	{
+		name      = "Vagrant Survival",
+		url       = "",
+		thumbnail = "https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/assets/Vagrant.webp",
+		color     = Color3.fromRGB(220, 75, 55),
+		status    = "Down",
+	},
+}
+
+local ALL_KEYS = {
+	Day      = {},
+	ThreeDay = {},
+	Week     = {},
+	Month    = {},
+	Lifetime = {},
+	Freemium = { "freemium" },
+}
+
+local KEY_DURATIONS = {
+	Day      = 86400,
+	ThreeDay = 259200,
+	Week     = 604800,
+	Month    = 2592000,
+	Lifetime = math.huge,
+	Freemium = math.huge,
+}
+
+local FOLDER   = "Vanta.wtf"
+local KEYFILE  = FOLDER .. "/key.dat"
+local XOR_BYTE = 0x5A
+
+-- ────────────────────────────────────────────────
+-- Utilities
+-- ────────────────────────────────────────────────
+
+local function xorStr(s)
+	local out = {}
+	for i = 1, #s do
+		out[i] = string.char(bit32.bxor(string.byte(s, i), XOR_BYTE))
+	end
+	return table.concat(out)
+end
+
+local function formatTime(seconds)
+	if seconds == math.huge then return "Lifetime" end
+	local d = math.floor(seconds / 86400)
+	local h = math.floor((seconds % 86400) / 3600)
+	local m = math.floor((seconds % 3600) / 60)
+	if d > 0 then return d .. "d " .. h .. "h"
+	elseif h > 0 then return h .. "h " .. m .. "m"
+	else return m .. "m" end
+end
+
+local function checkKey(input)
+	for tier, keys in pairs(ALL_KEYS) do
+		for _, v in ipairs(keys) do
+			if v == input then return tier end
+		end
+	end
+end
+
+-- ────────────────────────────────────────────────
+-- Key Storage
+-- ────────────────────────────────────────────────
+
+local function saveKey(key, expiry)
+	if not isfolder(FOLDER) then makefolder(FOLDER) end
+	writefile(KEYFILE, xorStr(key .. "|" .. tostring(expiry)))
+end
+
+local function loadSavedKey()
+	if not isfile(KEYFILE) then return nil end
+	local ok, raw = pcall(function() return xorStr(readfile(KEYFILE)) end)
+	if not ok then return nil end
+	local key, expiry = raw:match("^(.+)|(%d+%.?%d*)$")
+	if not key then return nil end
+	return key, tonumber(expiry)
+end
+
+local function deleteSavedKey()
+	pcall(function() delfile(KEYFILE) end)
+	pcall(function() deletefile(KEYFILE) end)
+end
+
+-- ────────────────────────────────────────────────
+-- UI Helpers
+-- ────────────────────────────────────────────────
+
+local Tween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local connections = {}
+local function track(c) table.insert(connections, c) return c end
+local function tween(obj, props) TweenService:Create(obj, Tween, props):Play() end
+
+local function addStroke(parent, color, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color           = color or Theme.Outline
+	s.Thickness       = 1
+	s.Transparency    = transparency or 0
+	s.LineJoinMode    = Enum.LineJoinMode.Miter
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent          = parent
+	return s
+end
+
+local function addCorner(parent, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or 4)
+	c.Parent = parent
+	return c
+end
+
+local function addPadding(parent, top, bottom, left, right)
+	local p = Instance.new("UIPadding")
+	p.PaddingTop    = UDim.new(0, top    or 0)
+	p.PaddingBottom = UDim.new(0, bottom or 0)
+	p.PaddingLeft   = UDim.new(0, left   or 0)
+	p.PaddingRight  = UDim.new(0, right  or 0)
+	p.Parent        = parent
+end
+
+local function addGradient(parent, rotation)
+	local g = Instance.new("UIGradient")
+	g.Rotation = rotation or -165
+	g.Color    = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, Theme.Gradient),
+	}
+	g.Parent = parent
+	return g
+end
+
+local function makeLabel(parent, text, size, color)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.FontFace               = Font.new("rbxasset://fonts/families/RobotoMono.json")
+	l.TextSize               = size or 11
+	l.Text                   = text or ""
+	l.TextColor3             = color or Theme.Text
+	l.AutomaticSize          = Enum.AutomaticSize.XY
+	l.Size                   = UDim2.new(0, 0, 0, 0)
+	l.TextXAlignment         = Enum.TextXAlignment.Left
+	l.Parent                 = parent
+	local stroke = Instance.new("UIStroke")
+	stroke.Color        = Theme.TextStroke
+	stroke.Thickness    = 1
+	stroke.Transparency = 0.6
+	stroke.Parent       = l
+	return l
+end
+
+local function makeButton(parent, position, size)
+	local btn = Instance.new("TextButton")
+	btn.Position         = position
+	btn.Size             = size
+	btn.BackgroundColor3 = Theme.Element
+	btn.BorderSizePixel  = 0
+	btn.Text             = ""
+	btn.AutoButtonColor  = false
+	btn.Parent           = parent
+	addStroke(btn, Theme.Outline)
+	addCorner(btn, 3)
+	addGradient(btn)
+	return btn
+end
+
+local function addHoverEffect(btn)
+	track(btn.MouseEnter:Connect(function()  tween(btn, { BackgroundColor3 = Theme.Hovered }) end))
+	track(btn.MouseLeave:Connect(function()  tween(btn, { BackgroundColor3 = Theme.Element }) end))
+end
+
+local function addTopAccent(parent)
+	local line = Instance.new("Frame")
+	line.Size             = UDim2.new(1, 0, 0, 1)
+	line.BorderSizePixel  = 0
+	line.BackgroundColor3 = Theme.Accent
+	line.Parent           = parent
+
+	local glow = Instance.new("Frame")
+	glow.Size             = UDim2.new(1, 0, 0, 20)
+	glow.Position         = UDim2.new(0, 0, 0, 1)
+	glow.BorderSizePixel  = 0
+	glow.BackgroundColor3 = Theme.Accent
+	glow.Parent           = parent
+	local g = Instance.new("UIGradient")
+	g.Rotation   = 90
+	g.Transparency = NumberSequence.new{
+		NumberSequenceKeypoint.new(0, 0.72),
+		NumberSequenceKeypoint.new(1, 1),
+	}
+	g.Parent = glow
+end
+
+-- ────────────────────────────────────────────────
+-- Snowfall
+-- ────────────────────────────────────────────────
+
+local SNOW_COUNT = 28
+
+local function makeSnowflake(parent, winW, winH)
+	local size  = math.random(2, 5)
+	local startX = math.random(0, winW)
+	local speed  = math.random(18, 38) -- pixels per second (slower = nicer)
+	local drift  = math.random(-12, 12)
+	local alpha  = math.random(30, 70) / 100
+
+	local flake = Instance.new("Frame")
+	flake.Size               = UDim2.new(0, size, 0, size)
+	flake.Position           = UDim2.new(0, startX, 0, math.random(-winH, 0))
+	flake.BackgroundColor3   = Theme.Snow
+	flake.BackgroundTransparency = 1 - alpha
+	flake.BorderSizePixel    = 0
+	flake.ZIndex             = 5
+	flake.Parent             = parent
+	addCorner(flake, size)
+
+	return { frame = flake, x = startX, y = flake.Position.Y.Offset, speed = speed, drift = drift, size = size, winW = winW, winH = winH }
+end
+
+local function startSnow(parent, winW, winH)
+	local flakes = {}
+	for _ = 1, SNOW_COUNT do
+		local f = makeSnowflake(parent, winW, winH)
+		-- scatter initial Y so they don't all start at top at once
+		f.y = math.random(-winH, winH)
+		f.frame.Position = UDim2.new(0, f.x, 0, f.y)
+		table.insert(flakes, f)
+	end
+
+	local last = os.clock()
+	track(RunService.RenderStepped:Connect(function()
+		local now = os.clock()
+		local dt  = now - last
+		last      = now
+
+		for _, f in ipairs(flakes) do
+			f.y = f.y + f.speed * dt
+			f.x = f.x + f.drift * dt * 0.3
+
+			-- wrap back to top when off screen
+			if f.y > f.winH + 10 then
+				f.y = -f.size - 2
+				f.x = math.random(0, f.winW)
+			end
+			if f.x < -f.size then f.x = f.winW + f.size end
+			if f.x > f.winW + f.size then f.x = -f.size end
+
+			f.frame.Position = UDim2.new(0, f.x, 0, f.y)
+		end
+	end))
+end
+
+-- ────────────────────────────────────────────────
+-- Shared UI builders
+-- ────────────────────────────────────────────────
+
+local function makeCursor(gui)
+	UserInputService.MouseIconEnabled = false
+	local cursor = Instance.new("Frame")
+	cursor.BackgroundTransparency = 1
+	cursor.Size   = UDim2.new(0, 16, 0, 16)
+	cursor.ZIndex = 9999
+	cursor.Parent = gui
+
+	local img = Instance.new("ImageLabel")
+	img.BackgroundTransparency = 1
+	img.Size        = UDim2.new(1, 0, 1, 0)
+	img.Image       = "rbxassetid://76631660114196"
+	img.ImageColor3 = Theme.Accent
+	img.ZIndex      = 9999
+	img.Parent      = cursor
+
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(99, 108, 117)),
+	}
+	g.Rotation = 90
+	g.Parent   = img
+
+	track(RunService.RenderStepped:Connect(function()
+		local mp = UserInputService:GetMouseLocation()
+		cursor.Position = UDim2.new(0, mp.X - 1, 0, mp.Y - 1)
+	end))
+end
+
+local function makeWindow(gui, width, height)
+	local win = Instance.new("Frame")
+	win.AnchorPoint      = Vector2.new(0.5, 0.5)
+	win.Position         = UDim2.new(0.5, 0, 0.5, 0)
+	win.Size             = UDim2.new(0, width, 0, height)
+	win.BackgroundColor3 = Theme.Background
+	win.BorderSizePixel  = 0
+	win.ClipsDescendants = true
+	win.Parent           = gui
+	addStroke(win, Theme.Outline)
+	addCorner(win, 5)
+	addTopAccent(win)
+	return win
+end
+
+local function makeDraggable(win)
+	local dragging, dragStart, startPos = false, nil, nil
+	track(win.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging  = true
+			dragStart = inp.Position
+			startPos  = win.Position
+		end
+	end))
+	track(win.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end))
+	track(UserInputService.InputChanged:Connect(function(inp)
+		if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+			local d = inp.Position - dragStart
+			win.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + d.X,
+				startPos.Y.Scale, startPos.Y.Offset + d.Y
+			)
+		end
+	end))
+end
+
+local function makeSidebar(win, tier, timeLeft)
+	local sidebar = Instance.new("Frame")
+	sidebar.Position         = UDim2.new(0, 14, 0, 14)
+	sidebar.Size             = UDim2.new(0, 68, 1, -28)
+	sidebar.BackgroundColor3 = Theme.Inline
+	sidebar.BorderSizePixel  = 0
+	sidebar.ZIndex           = 6
+	sidebar.Parent           = win
+	addStroke(sidebar, Theme.Outline)
+	addCorner(sidebar, 4)
+
+	-- Avatar
+	local avatarFrame = Instance.new("Frame")
+	avatarFrame.AnchorPoint      = Vector2.new(0.5, 0)
+	avatarFrame.Position         = UDim2.new(0.5, 0, 0, 12)
+	avatarFrame.Size             = UDim2.new(0, 44, 0, 44)
+	avatarFrame.BackgroundColor3 = Theme.Element
+	avatarFrame.BorderSizePixel  = 0
+	avatarFrame.ZIndex           = 7
+	avatarFrame.Parent           = sidebar
+	addStroke(avatarFrame, Theme.Outline)
+	addCorner(avatarFrame, 22)
+
+	local avatarImg = Instance.new("ImageLabel")
+	avatarImg.BackgroundTransparency = 1
+	avatarImg.Size      = UDim2.new(1, 0, 1, 0)
+	avatarImg.ScaleType = Enum.ScaleType.Fit
+	avatarImg.Image     = ""
+	avatarImg.ZIndex    = 8
+	avatarImg.Parent    = avatarFrame
+	addCorner(avatarImg, 22)
+	task.spawn(function()
+		local ok, img = pcall(function()
+			return Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+		end)
+		if ok and img then avatarImg.Image = img end
+	end)
+
+	if tier then
+		local tierLbl = makeLabel(sidebar, tier, 9, Theme.Accent)
+		tierLbl.AnchorPoint    = Vector2.new(0.5, 0)
+		tierLbl.Position       = UDim2.new(0.5, 0, 0, 62)
+		tierLbl.TextXAlignment = Enum.TextXAlignment.Center
+		tierLbl.ZIndex         = 7
+
+		local timeLbl = makeLabel(sidebar, formatTime(timeLeft), 8, Theme.Text)
+		timeLbl.AnchorPoint      = Vector2.new(0.5, 0)
+		timeLbl.Position         = UDim2.new(0.5, 0, 0, 76)
+		timeLbl.TextXAlignment   = Enum.TextXAlignment.Center
+		timeLbl.TextTransparency = 0.4
+		timeLbl.ZIndex           = 7
+	end
+
+	local accent = Instance.new("Frame")
+	accent.AnchorPoint      = Vector2.new(0.5, 1)
+	accent.Position         = UDim2.new(0.5, 0, 1, -10)
+	accent.Size             = UDim2.new(0.55, 0, 0, 1)
+	accent.BorderSizePixel  = 0
+	accent.BackgroundColor3 = Theme.Accent
+	accent.ZIndex           = 7
+	accent.Parent           = sidebar
+
+	return sidebar
+end
+
+local function makeContent(win)
+	local content = Instance.new("Frame")
+	content.Position               = UDim2.new(0, 96, 0, 0)
+	content.Size                   = UDim2.new(1, -110, 1, 0)
+	content.BackgroundTransparency = 1
+	content.BorderSizePixel        = 0
+	content.ZIndex                 = 6
+	content.Parent                 = win
+
+	local title = makeLabel(content, "Vanta.wtf", 15, Theme.Accent)
+	title.Position = UDim2.new(0, 0, 0, 20)
+	title.ZIndex   = 7
+
+	local divider = Instance.new("Frame")
+	divider.Position         = UDim2.new(0, 0, 0, 46)
+	divider.Size             = UDim2.new(1, 0, 0, 1)
+	divider.BorderSizePixel  = 0
+	divider.BackgroundColor3 = Theme.Outline
+	divider.ZIndex           = 7
+	divider.Parent           = content
+
+	return content
+end
+
+-- ────────────────────────────────────────────────
+-- Main Class
+-- ────────────────────────────────────────────────
+
+local EWare = {}
+EWare.__index = EWare
+
+local activeGui
+
+function EWare.new()
+	return setmetatable({ _dead = false }, EWare)
+end
+
+function EWare:Unload()
+	self._dead = true
+	for _, c in ipairs(connections) do pcall(function() c:Disconnect() end) end
+	connections = {}
+	if activeGui then pcall(function() activeGui:Destroy() end) activeGui = nil end
+	UserInputService.MouseIconEnabled = true
+	getgenv().EWareLoaded = nil
+end
+
+function EWare:ShowGameSelect(tier, timeLeft)
+	if activeGui then pcall(function() activeGui:Destroy() end) end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name           = "eware_select"
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	gui.DisplayOrder   = 10000
+	gui.ResetOnSpawn   = false
+	gui.IgnoreGuiInset = true
+	gui.Parent         = CoreGui
+	activeGui          = gui
+
+	local ROW_H    = 76
+	local ROW_GAP  = 6
+	local LIST_PAD = 10
+	local HEADER_H = 58
+	local WIN_W    = 420
+	local totalRows = #GAMES
+	local listH    = totalRows * ROW_H + (totalRows - 1) * ROW_GAP + LIST_PAD * 2
+	local winH     = math.min(math.max(HEADER_H + listH + 14, 240), 480)
+
+	if not isfolder(FOLDER) then makefolder(FOLDER) end
+
+	makeCursor(gui)
+	local win     = makeWindow(gui, WIN_W, winH)
+	startSnow(win, WIN_W, winH)
+	local sidebar = makeSidebar(win, tier, timeLeft)
+	local content = makeContent(win)
+
+	-- Load button
+	local loadBtn = makeButton(sidebar, UDim2.new(0.5, 0, 0, 96), UDim2.new(1, -12, 0, 22))
+	loadBtn.AnchorPoint = Vector2.new(0.5, 0)
+	loadBtn.ZIndex = 8
+	addHoverEffect(loadBtn)
+	local loadTxt = makeLabel(loadBtn, "load", 9, Theme.Text)
+	loadTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	loadTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	loadTxt.TextXAlignment = Enum.TextXAlignment.Center
+	loadTxt.ZIndex         = 9
+
+	-- Remove key button
+	local removeBtn = makeButton(sidebar, UDim2.new(0.5, 0, 0, 124), UDim2.new(1, -12, 0, 22))
+	removeBtn.AnchorPoint = Vector2.new(0.5, 0)
+	removeBtn.ZIndex = 8
+	local removeTxt = makeLabel(removeBtn, "log out", 8, Theme.Error)
+	removeTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	removeTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	removeTxt.TextXAlignment = Enum.TextXAlignment.Center
+	removeTxt.ZIndex         = 9
+	track(removeBtn.MouseEnter:Connect(function() tween(removeBtn, { BackgroundColor3 = Color3.fromRGB(50, 24, 24) }) end))
+	track(removeBtn.MouseLeave:Connect(function() tween(removeBtn, { BackgroundColor3 = Theme.Element }) end))
+
+	-- Game list
+	local listFrame = Instance.new("ScrollingFrame")
+	listFrame.Position               = UDim2.new(0, 0, 0, 56)
+	listFrame.Size                   = UDim2.new(1, 0, 1, -64)
+	listFrame.BackgroundTransparency = 1
+	listFrame.BorderSizePixel        = 0
+	listFrame.ScrollBarThickness     = 2
+	listFrame.ScrollBarImageColor3   = Theme.Accent
+	listFrame.CanvasSize             = UDim2.new(0, 0, 0, 0)
+	listFrame.AutomaticCanvasSize    = Enum.AutomaticSize.Y
+	listFrame.ClipsDescendants       = true
+	listFrame.ZIndex                 = 7
+	listFrame.Parent                 = content
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding   = UDim.new(0, ROW_GAP)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent    = listFrame
+	addPadding(listFrame, LIST_PAD, LIST_PAD, 0, 2)
+
+	local selectedIdx = nil
+	local rows        = {}
+
+	local function deselectAll()
+		for _, r in pairs(rows) do
+			tween(r.frame, { BackgroundColor3 = r.hovered and Theme.Hovered or Theme.Element })
+			tween(r.stroke, { Color = Theme.Outline, Transparency = 0 })
+			r.nameLabel.TextColor3 = Theme.Text
+		end
+	end
+
+	local function selectRow(idx)
+		deselectAll()
+		selectedIdx = idx
+		local r = rows[idx]
+		tween(r.frame, { BackgroundColor3 = Color3.fromRGB(38, 48, 42) })
+		tween(r.stroke, { Color = Color3.fromRGB(200, 215, 205), Transparency = 0.45 })
+		r.nameLabel.TextColor3 = Color3.fromRGB(220, 235, 225)
+		tween(loadBtn, { BackgroundColor3 = Color3.fromRGB(50, 60, 54) })
+		task.wait(0.06)
+		tween(loadBtn, { BackgroundColor3 = Theme.Element })
+	end
+
+	for i, game in ipairs(GAMES) do
+		local row = Instance.new("TextButton")
+		row.Size             = UDim2.new(1, 0, 0, ROW_H)
+		row.BackgroundColor3 = Theme.Element
+		row.BorderSizePixel  = 0
+		row.Text             = ""
+		row.AutoButtonColor  = false
+		row.LayoutOrder      = i
+		row.ClipsDescendants = true
+		row.ZIndex           = 7
+		row.Parent           = listFrame
+		local rowStroke = addStroke(row, Theme.Outline)
+		addCorner(row, 4)
+		addGradient(row)
+
+		-- Left color bar
+		local colorBar = Instance.new("Frame")
+		colorBar.Size             = UDim2.new(0, 3, 1, 0)
+		colorBar.BorderSizePixel  = 0
+		colorBar.BackgroundColor3 = game.color
+		colorBar.ZIndex           = 8
+		colorBar.Parent           = row
+
+		-- Thumbnail
+		local thumbFrame = Instance.new("Frame")
+		thumbFrame.AnchorPoint      = Vector2.new(0, 0.5)
+		thumbFrame.Position         = UDim2.new(0, 10, 0.5, 0)
+		thumbFrame.Size             = UDim2.new(0, 100, 0, 62)
+		thumbFrame.BackgroundColor3 = Theme.Background
+		thumbFrame.BorderSizePixel  = 0
+		thumbFrame.ZIndex           = 8
+		thumbFrame.ClipsDescendants = true
+		thumbFrame.Parent           = row
+		addStroke(thumbFrame, Theme.Outline)
+		addCorner(thumbFrame, 4)
+
+		local thumbImg = Instance.new("ImageLabel")
+		thumbImg.BackgroundTransparency = 1
+		thumbImg.Size       = UDim2.new(1, 0, 1, 0)
+		thumbImg.ScaleType  = Enum.ScaleType.Crop
+		thumbImg.Image      = ""
+		thumbImg.ZIndex     = 9
+		thumbImg.Parent     = thumbFrame
+		addCorner(thumbImg, 4)
+
+		if game.thumbnail and game.thumbnail ~= "" then
+			task.spawn(function()
+				local fname = FOLDER .. "/thumb_" .. i .. ".png"
+				if not isfile(fname) then
+					local ok, data = pcall(function()
+						return (http and http.request or request or httprequest)({
+							Url    = game.thumbnail,
+							Method = "GET",
+						})
+					end)
+					if ok and data and data.Body and data.Body ~= "" then
+						writefile(fname, data.Body)
+					end
+				end
+				if isfile(fname) then
+					local ok2, asset = pcall(getcustomasset, fname)
+					if ok2 and asset then thumbImg.Image = asset end
+				end
+			end)
+		end
+
+		-- Game name
+		local nameLabel = makeLabel(row, game.name, 13, Theme.Text)
+		nameLabel.AnchorPoint = Vector2.new(0, 0.5)
+		nameLabel.Position    = UDim2.new(0, 120, 0.5, -10)
+		nameLabel.ZIndex      = 9
+
+		-- Status
+		local statusLabel = makeLabel(row, game.status, 10, game.color)
+		statusLabel.AnchorPoint      = Vector2.new(0, 0.5)
+		statusLabel.Position         = UDim2.new(0, 120, 0.5, 8)
+		statusLabel.TextXAlignment   = Enum.TextXAlignment.Left
+		statusLabel.TextTransparency = 0.15
+		statusLabel.ZIndex           = 9
+
+		rows[i] = { frame = row, stroke = rowStroke, nameLabel = nameLabel, url = game.url, hovered = false }
+
+		track(row.MouseEnter:Connect(function()
+			rows[i].hovered = true
+			if selectedIdx ~= i then tween(row, { BackgroundColor3 = Theme.Hovered }) end
+		end))
+		track(row.MouseLeave:Connect(function()
+			rows[i].hovered = false
+			if selectedIdx ~= i then tween(row, { BackgroundColor3 = Theme.Element }) end
+		end))
+		track(row.MouseButton1Down:Connect(function() selectRow(i) end))
+	end
+
+	-- Confirm overlay
+	local confirmOverlay = Instance.new("Frame")
+	confirmOverlay.Size                  = UDim2.new(1, 0, 1, 0)
+	confirmOverlay.BackgroundColor3      = Theme.Background
+	confirmOverlay.BackgroundTransparency = 0.1
+	confirmOverlay.BorderSizePixel       = 0
+	confirmOverlay.ZIndex                = 200
+	confirmOverlay.Visible               = false
+	confirmOverlay.Parent                = win
+
+	local confirmBox = Instance.new("Frame")
+	confirmBox.AnchorPoint      = Vector2.new(0.5, 0.5)
+	confirmBox.Position         = UDim2.new(0.5, 0, 0.5, 0)
+	confirmBox.Size             = UDim2.new(0, 220, 0, 90)
+	confirmBox.BackgroundColor3 = Theme.Inline
+	confirmBox.BorderSizePixel  = 0
+	confirmBox.ZIndex           = 201
+	confirmBox.Parent           = confirmOverlay
+	addStroke(confirmBox, Theme.Outline)
+	addCorner(confirmBox, 5)
+
+	local confirmTitle = makeLabel(confirmBox, "log out?", 11, Theme.Text)
+	confirmTitle.AnchorPoint    = Vector2.new(0.5, 0)
+	confirmTitle.Position       = UDim2.new(0.5, 0, 0, 14)
+	confirmTitle.TextXAlignment = Enum.TextXAlignment.Center
+	confirmTitle.ZIndex         = 202
+
+	local confirmSub = makeLabel(confirmBox, "you will be sent back to key screen", 9, Theme.Placeholder)
+	confirmSub.AnchorPoint      = Vector2.new(0.5, 0)
+	confirmSub.Position         = UDim2.new(0.5, 0, 0, 30)
+	confirmSub.TextXAlignment   = Enum.TextXAlignment.Center
+	confirmSub.TextTransparency = 0.35
+	confirmSub.ZIndex           = 202
+
+	local yesBtn = makeButton(confirmBox, UDim2.new(0, 12, 0, 56), UDim2.new(0, 90, 0, 22))
+	yesBtn.ZIndex = 202
+	local yesTxt = makeLabel(yesBtn, "yes, log out", 9, Theme.Error)
+	yesTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	yesTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	yesTxt.TextXAlignment = Enum.TextXAlignment.Center
+	yesTxt.ZIndex         = 203
+	track(yesBtn.MouseEnter:Connect(function() tween(yesBtn, { BackgroundColor3 = Color3.fromRGB(50, 24, 24) }) end))
+	track(yesBtn.MouseLeave:Connect(function() tween(yesBtn, { BackgroundColor3 = Theme.Element }) end))
+
+	local noBtn = makeButton(confirmBox, UDim2.new(1, -102, 0, 56), UDim2.new(0, 90, 0, 22))
+	noBtn.ZIndex = 202
+	local noTxt = makeLabel(noBtn, "cancel", 9, Theme.Text)
+	noTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	noTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	noTxt.TextXAlignment = Enum.TextXAlignment.Center
+	noTxt.ZIndex         = 203
+	addHoverEffect(noBtn)
+
+	-- Close button
+	local closeBtn = makeButton(sidebar, UDim2.new(0.5, 0, 0, 152), UDim2.new(1, -12, 0, 22))
+	closeBtn.AnchorPoint = Vector2.new(0.5, 0)
+	closeBtn.ZIndex = 8
+	local closeTxt = makeLabel(closeBtn, "close", 9, Theme.Placeholder)
+	closeTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	closeTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	closeTxt.TextXAlignment = Enum.TextXAlignment.Center
+	closeTxt.ZIndex         = 9
+	track(closeBtn.MouseEnter:Connect(function()
+		tween(closeBtn, { BackgroundColor3 = Theme.Hovered })
+		closeTxt.TextColor3 = Theme.Text
+	end))
+	track(closeBtn.MouseLeave:Connect(function()
+		tween(closeBtn, { BackgroundColor3 = Theme.Element })
+		closeTxt.TextColor3 = Theme.Placeholder
+	end))
+	track(closeBtn.MouseButton1Down:Connect(function()
+		self:Unload()
+	end))
+
+	track(removeBtn.MouseButton1Down:Connect(function()
+		confirmOverlay.Visible = true
+	end))
+	track(noBtn.MouseButton1Down:Connect(function()
+		confirmOverlay.Visible = false
+	end))
+	track(yesBtn.MouseButton1Down:Connect(function()
+		deleteSavedKey()
+		confirmOverlay.Visible = false
+		self:Unload()
+		local newInst = EWare.new()
+		getgenv().EWareLoaded = newInst
+		newInst:Build()
+	end))
+
+	track(loadBtn.MouseButton1Down:Connect(function()
+		if not selectedIdx then return end
+		local r = rows[selectedIdx]
+		if not r or r.url == "" then return end
+		tween(loadBtn, { BackgroundColor3 = Theme.Accent })
+		task.wait(0.14)
+		local url = r.url
+		self:Unload()
+		task.spawn(function()
+			local src = game:HttpGet(url)
+			if src and src ~= "" then
+				local fn = loadstring(src)
+				if fn then pcall(fn) end
+			end
+		end)
+	end))
+
+	makeDraggable(win)
+	track(UserInputService.InputBegan:Connect(function(inp, gp)
+		if not gp and inp.KeyCode == Enum.KeyCode.Delete then self:Unload() end
+	end))
+end
+
+function EWare:Build()
+	local gui = Instance.new("ScreenGui")
+	gui.Name           = "eware_key"
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	gui.DisplayOrder   = 10000
+	gui.ResetOnSpawn   = false
+	gui.IgnoreGuiInset = true
+	gui.Parent         = CoreGui
+	activeGui          = gui
+
+	local WIN_W = 400
+	local WIN_H = 220
+
+	makeCursor(gui)
+	local win     = makeWindow(gui, WIN_W, WIN_H)
+	startSnow(win, WIN_W, WIN_H)
+	local sidebar = makeSidebar(win, nil, nil)
+	local content = makeContent(win)
+
+	-- Key input
+	local inputBg = Instance.new("Frame")
+	inputBg.Position         = UDim2.new(0, 0, 0, 58)
+	inputBg.Size             = UDim2.new(1, 0, 0, 28)
+	inputBg.BackgroundColor3 = Theme.Element
+	inputBg.BorderSizePixel  = 0
+	inputBg.ZIndex           = 7
+	inputBg.Parent           = content
+	addStroke(inputBg, Theme.Outline)
+	addCorner(inputBg, 3)
+	addGradient(inputBg)
+	track(inputBg.MouseEnter:Connect(function() tween(inputBg, { BackgroundColor3 = Theme.Hovered }) end))
+	track(inputBg.MouseLeave:Connect(function() tween(inputBg, { BackgroundColor3 = Theme.Element }) end))
+
+	local inputBox = Instance.new("TextBox")
+	inputBox.BackgroundTransparency = 1
+	inputBox.Size              = UDim2.new(1, 0, 1, 0)
+	inputBox.FontFace          = Font.new("rbxasset://fonts/families/RobotoMono.json")
+	inputBox.TextSize          = 10
+	inputBox.TextColor3        = Theme.Text
+	inputBox.PlaceholderColor3 = Theme.Placeholder
+	inputBox.PlaceholderText   = "enter key..."
+	inputBox.Text              = ""
+	inputBox.ClearTextOnFocus  = false
+	inputBox.TextXAlignment    = Enum.TextXAlignment.Left
+	inputBox.ZIndex            = 8
+	inputBox.Parent            = inputBg
+	addPadding(inputBox, 0, 0, 10, 10)
+
+	local statusLbl = makeLabel(content, "", 10, Theme.Placeholder)
+	statusLbl.Position         = UDim2.new(0, 0, 0, 96)
+	statusLbl.TextTransparency = 0.3
+	statusLbl.ZIndex           = 7
+
+	local authBtn = makeButton(content, UDim2.new(0, 0, 0, 116), UDim2.new(1, 0, 0, 26))
+	authBtn.ZIndex = 7
+	addHoverEffect(authBtn)
+	local authTxt = makeLabel(authBtn, "authenticate", 10, Theme.Text)
+	authTxt.AnchorPoint    = Vector2.new(0.5, 0.5)
+	authTxt.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	authTxt.TextXAlignment = Enum.TextXAlignment.Center
+	authTxt.ZIndex         = 8
+
+	local function setStatus(msg, isError)
+		statusLbl.Text       = msg
+		statusLbl.TextColor3 = isError and Theme.Error or Theme.Accent
+	end
+
+	local function flashButton(success)
+		tween(authBtn, { BackgroundColor3 = success and Theme.Accent or Theme.Error })
+		task.wait(0.14)
+		tween(authBtn, { BackgroundColor3 = Theme.Element })
+	end
+
+	local function shakeWindow()
+		local base = win.Position
+		task.spawn(function()
+			for _, ox in ipairs({ -6, 6, -5, 5, -3, 3, 0 }) do
+				win.Position = UDim2.new(base.X.Scale, base.X.Offset + ox, base.Y.Scale, base.Y.Offset)
+				task.wait(0.045)
+			end
+		end)
+	end
+
+	local busy = false
+	local function tryAuth(raw)
+		if busy then return end
+		raw = raw:match("^%s*(.-)%s*$")
+		if raw == "" then
+			setStatus("key cannot be empty", true)
+			flashButton(false)
+			return
+		end
+		local tier = checkKey(raw)
+		if tier then
+			busy = true
+			local duration = KEY_DURATIONS[tier]
+			local expiry   = duration == math.huge and math.huge or os.time() + duration
+			saveKey(raw, expiry)
+			setStatus("authenticated  ·  " .. formatTime(duration), false)
+			flashButton(true)
+			task.delay(0.7, function()
+				if not self._dead then
+					local timeLeft = expiry == math.huge and math.huge or (expiry - os.time())
+					self:ShowGameSelect(tier, timeLeft)
+				end
+				busy = false
+			end)
+		else
+			setStatus("invalid key", true)
+			flashButton(false)
+			shakeWindow()
+		end
+	end
+
+	-- Close button
+	local closeBtnKey = makeButton(content, UDim2.new(0, 0, 0, 150), UDim2.new(1, 0, 0, 22))
+	closeBtnKey.ZIndex = 7
+	local closeTxtKey = makeLabel(closeBtnKey, "close", 9, Theme.Placeholder)
+	closeTxtKey.AnchorPoint    = Vector2.new(0.5, 0.5)
+	closeTxtKey.Position       = UDim2.new(0.5, 0, 0.5, 0)
+	closeTxtKey.TextXAlignment = Enum.TextXAlignment.Center
+	closeTxtKey.ZIndex         = 8
+	track(closeBtnKey.MouseEnter:Connect(function()
+		tween(closeBtnKey, { BackgroundColor3 = Theme.Hovered })
+		closeTxtKey.TextColor3 = Theme.Text
+	end))
+	track(closeBtnKey.MouseLeave:Connect(function()
+		tween(closeBtnKey, { BackgroundColor3 = Theme.Element })
+		closeTxtKey.TextColor3 = Theme.Placeholder
+	end))
+	track(closeBtnKey.MouseButton1Down:Connect(function()
+		self:Unload()
+	end))
+
+	track(authBtn.MouseButton1Down:Connect(function() tryAuth(inputBox.Text) end))
+	track(inputBox.FocusLost:Connect(function(enter) if enter then tryAuth(inputBox.Text) end end))
+
+	makeDraggable(win)
+	track(UserInputService.InputBegan:Connect(function(inp, gp)
+		if not gp and inp.KeyCode == Enum.KeyCode.Delete then self:Unload() end
+	end))
+
+	local savedKey, savedExpiry = loadSavedKey()
+	if savedKey and savedExpiry then
+		local valid = (savedExpiry == math.huge) or (os.time() < savedExpiry)
+		if valid and checkKey(savedKey) then
+			local tier     = checkKey(savedKey)
+			local timeLeft = savedExpiry == math.huge and math.huge or (savedExpiry - os.time())
+			inputBox.Text  = savedKey
+			setStatus("welcome back  ·  " .. formatTime(timeLeft), false)
+			task.delay(0.9, function()
+				if not self._dead then self:ShowGameSelect(tier, timeLeft) end
+			end)
+		else
+			deleteSavedKey()
+			setStatus("key expired  ·  enter a new one", true)
+		end
+	end
+end
+
+-- ────────────────────────────────────────────────
+-- Init
+-- ────────────────────────────────────────────────
+
+local inst = EWare.new()
+getgenv().EWareLoaded = inst
+inst:Build()

@@ -1,6 +1,6 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sigmaboi4167-code/uilib/main/Lib"))()
-local Window = Library:Window({Logo = "uilogo.png", FadeTime = 0.3})
-local Watermark = Library:Watermark("EpsteinWare | discord.gg/fqRKstBTBF")
+local Window = Library:Window({Logo = "vanta.wtf.png", FadeTime = 0.3})
+local Watermark = Library:Watermark("Vanta.wtf | discord.gg/fqRKstBTBF")
 local KeybindList = Library:KeybindList()
 local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList)
 
@@ -157,4 +157,4 @@ HitSoundSection:Slider({Name = "Sound Volume", Flag = "HitSoundBodyVol", Min = 0
 HitSoundSection:Dropdown({Name = "Head Sound", Flag = "HitSoundHead", Options = {"Rust", "CS:GO", "Minecraft", "Custom"}, Default = "Rust", Callback = function(v) end})
 HitSoundSection:Slider({Name = "Sound Volume", Flag = "HitSoundHeadVol", Min = 0, Max = 10, Default = 3, Callback = function(v) end})
 
-Library:Notification("EpsteinWare", "loaded properly", 5)
+Library:Notification("Vanta.wtf", "loaded properly", 5)
